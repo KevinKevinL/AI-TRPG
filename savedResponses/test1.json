@@ -1,0 +1,12 @@
+{
+    "testRequired": [
+      "intelligence",
+      "Investigate"
+    ],
+    "hardLevel": 2,
+    "talkRequired": [
+      "艾米莉亚·韦伯",
+      "安达"
+    ],
+    "fightRequired": 0
+  }
