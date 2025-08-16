@@ -9,6 +9,7 @@ import os
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+import skillCheck
 
 # 加载环境变量
 load_dotenv()
@@ -73,7 +74,7 @@ def npc_dialogue_agent(state: AgentState):
 
 def skill_check_agent(state: AgentState):
     print("---Skill Check Agent 开始---")
-    result = "你成功通过了检定！"
+    result = skillCheck.skill_check(state["player_input"])
     return {"skill_check_result": result}
 
 def random_event_agent(state: AgentState):
