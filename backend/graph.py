@@ -9,6 +9,9 @@ import os
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+import skillCheck
+import random_event
+from character_state import get_current_character_id
 
 # 加载环境变量
 load_dotenv()
@@ -57,7 +60,7 @@ def router_agent(state: AgentState):
     try:
         response = llm_with_tools.invoke(messages)
         intents = response.intents
-        if random.random() < 0.5:
+        if random.random() < 0.98:
             if "random_event" not in intents:
                 intents.append("random_event")
         print(f"识别到的意图: {intents}")
@@ -73,13 +76,15 @@ def npc_dialogue_agent(state: AgentState):
 
 def skill_check_agent(state: AgentState):
     print("---Skill Check Agent 开始---")
-    result = "你成功通过了检定！"
+    result = skillCheck.skill_check(state["player_input"])
     return {"skill_check_result": result}
 
 def random_event_agent(state: AgentState):
     print("---Random Event Agent 开始---")
-    events = ["附近传来了一声狼嚎。", "你发现了一株稀有的草药。"]
-    event_desc = random.choice(events)
+    # events = ["附近传来了一声狼嚎。", "你发现了一株稀有的草药。"]
+    current_id = get_current_character_id
+    print(f"当前角色ID: {current_id}")
+    event_desc = random_event.get_random_event_result(get_current_character_id())
     return {"random_event_desc": event_desc}
 
 def rag_retrieval_agent(state: AgentState):

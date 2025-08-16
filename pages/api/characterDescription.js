@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     }
 
     try {
-        // 向你的 Python 后端发送请求
+        // 向 Python 后端发送请求
         const pythonBackendUrl = "http://localhost:8000/api/generate_description";
 
         const backendResponse = await fetch(pythonBackendUrl, {

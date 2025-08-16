@@ -30,6 +30,36 @@ export default function MainPlay() {
     };
   }, []);
 
+  // 新增：当角色ID存在时，发送到后端
+  useEffect(() => {
+    if (currentCharacterId) {
+      const sendCharacterIdToBackend = async () => {
+        try {
+          const response = await fetch('/api/characterEntered', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              character_id: currentCharacterId
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log('角色ID已发送到后端:', data);
+          } else {
+            console.error('发送角色ID到后端失败:', response.status);
+          }
+        } catch (error) {
+          console.error('发送角色ID到后端时出错:', error);
+        }
+      };
+
+      sendCharacterIdToBackend();
+    }
+  }, [currentCharacterId]);
+
   return (
     <div className="flex h-screen bg-slate-950">
       {/* Main Content Area */}

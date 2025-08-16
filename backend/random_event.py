@@ -1,34 +1,37 @@
 import random
-from backend.DatabaseManager import select_mapid_by_characterid, select_eventinfo_by_mapid
+from databaseManager import db_manager
+import skillCheck
+import json
 
-def get_mapid_from_agentstate(agent_state):
-    character_id = agent_state.get('characterid')
+def get_mapid_from_agentstate(current_character_id):
+    character_id = current_character_id
     if not character_id:
         return None
-    return select_mapid_by_characterid(character_id)
+    return db_manager.select_mapid_by_characterid(character_id)
 
 
 def get_events_from_mapid(map_id):
-    events = select_eventinfo_by_mapid(map_id)
-    # events 是 fetchall 返回的元组列表 (eventInfo, rate, result)
+    events = db_manager.select_eventinfo_by_mapid(map_id)
+    # events 是字典列表 [{'eventInfo': ..., 'rate': ..., 'result': ...}]
     return events if events else []
 
 
 def weighted_random_event(events):
     if not events:
         return None
-    total = sum(event[1] for event in events)  # event[1] 是 rate
+    total = sum(event['rate'] for event in events)
     r = random.uniform(0, total)
     upto = 0
     for event in events:
-        upto += event[1]
+        upto += event['rate']
         if upto >= r:
             return event
     return events[-1]  # 兜底
 
 
-def get_random_event_result(agent_state):
-    map_id = get_mapid_from_agentstate(agent_state)
+def get_random_event_result(current_character_id):
+    map_id = get_mapid_from_agentstate(current_character_id)
+    print(f"当前角色对应的ID: {current_character_id}")
     if not map_id:
         return "未找到角色对应的地图ID"
     events = get_events_from_mapid(map_id)
@@ -37,4 +40,13 @@ def get_random_event_result(agent_state):
     selected_event = weighted_random_event(events)
     if not selected_event:
         return "未能随机选出事件"
-    return selected_event[2] if selected_event[2] else "事件无结果字段"  # event[2] 是 result
+    skill_name = skillCheck.get_key_by_testRequired(selected_event['testRequired'])
+    character_data = db_manager.get_character_data(current_character_id)
+    skill_check_result = skillCheck.check_skill(character_data, skill_name, selected_event['hard_level'])
+    print(f"技能检定结果: {skill_check_result}")
+    skill_check_result['event_info'] = selected_event['event_info']
+    if skill_check_result['result'] == '失败':
+        skill_check_result['failsureResult'] = selected_event.get('failsureResult', "事件无失败结果字段")
+    elif skill_check_result['result'] == '成功':
+        skill_check_result['successResult'] = selected_event.get('successResult', "事件无成功结果字段")
+    return json.dumps(skill_check_result, ensure_ascii=False)
