@@ -8,7 +8,6 @@ export default function CharacterStatus({ characterId }) {
   const [loading, setLoading] = useState(true);
 
   // 从 DatabaseManager 钩子中获取加载数据的方法
-  // DatabaseManager 钩子内部应使用 useCallback 来确保此函数是稳定的
   const { loadCharacterAttributes } = DatabaseManager();
 
   useEffect(() => {
@@ -34,7 +33,7 @@ export default function CharacterStatus({ characterId }) {
     loadCharacterData();
     // 将 characterId 和 loadCharacterAttributes 添加到依赖项数组中
     // 假设 loadCharacterAttributes 是一个稳定的函数
-  }, [characterId, loadCharacterAttributes]);
+  }, [characterId]);
 
   // 如果正在加载或没有角色数据，不渲染任何内容
   if (loading || !characterData) {
