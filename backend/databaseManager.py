@@ -5,6 +5,23 @@ import os
 from typing import Dict, Any, Optional, List
 
 class DatabaseManager:
+    def select_mapid_by_characterid(self, character_id):
+        """
+        根据角色ID查询对应的地图ID
+        """
+        query = "SELECT mapId FROM characters WHERE id = ?"
+        result = self.execute_query(query, (character_id,))
+        # print(character_id)
+        return result[0]['mapId'] if result else None
+
+    def select_eventinfo_by_mapid(self, map_id):
+        """
+        根据地图ID查询事件信息、发生率和结果
+        """
+        query = "SELECT event_info, rate, testRequired, successResult, failsureResult, hard_level FROM events WHERE map_ids = ?"
+        result = self.execute_query(query, (map_id,))
+        return result if result else None
+    
     def __init__(self, db_path: str = None):
         """
         初始化数据库管理器

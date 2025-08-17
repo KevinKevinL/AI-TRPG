@@ -13,6 +13,8 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 import skillCheck
 from intent_recognizer import recognize_intents
+import random_event
+from character_state import get_current_character_id
 
 # 加载环境变量
 load_dotenv()
@@ -76,8 +78,10 @@ def skill_check_agent(state: AgentState):
 
 def random_event_agent(state: AgentState):
     print("---Random Event Agent 开始---")
-    events = ["附近传来了一声狼嚎。", "你发现了一株稀有的草药。"]
-    event_desc = random.choice(events)
+    # events = ["附近传来了一声狼嚎。", "你发现了一株稀有的草药。"]
+    current_id = get_current_character_id()
+    print(f"当前角色ID: {current_id}")
+    event_desc = random_event.get_random_event_result(current_id)
     return {"random_event_desc": event_desc}
 
 def rag_retrieval_agent(state: AgentState):

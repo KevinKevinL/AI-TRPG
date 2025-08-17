@@ -68,3 +68,4 @@ tsconfig.tsbuildinfo
 package-lock.json
 package.json
 pages/api/db.js
+*.pyc

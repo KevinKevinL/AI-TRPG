@@ -248,3 +248,44 @@ def get_character_info():
             "character_id": None,
             "status": "not_loaded"
         }
+
+def get_key_by_testRequired(test_required):
+    """根据 testRequired 获取对应的属性或技能名"""
+    all_keys = {
+        1: 'strength',
+        2: 'constitution',
+        3: 'size',
+        4: 'dexterity',
+        5: 'appearance',
+        6: 'intelligence',
+        7: 'power',
+        8: 'education',
+        9: 'luck',
+        10: 'sanity',
+        11: 'magicPoints',
+        12: 'interestPoints',
+        13: 'hitPoints',
+        14: 'moveRate',
+        15: 'damageBonus',
+        16: 'build',
+        17: 'professionalPoints',
+        18: 'fighting',
+        19: 'firearms',
+        20: 'dodge',
+        21: 'mechanics',
+        22: 'drive',
+        23: 'stealth',
+        24: 'investigate',
+        25: 'sleightOfHand',
+        26: 'electronics',
+        27: 'history',
+        28: 'science',
+        29: 'medicine',
+        30: 'occult',
+        31: 'library',
+        32: 'art',
+        33: 'persuade',
+        34: 'psychology'
+    }
+    return all_keys[test_required] if test_required in all_keys else None
+   
