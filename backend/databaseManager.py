@@ -152,9 +152,9 @@ class DatabaseManager:
     def get_character_skills(self, character_id: str) -> Dict[str, int]:
         """获取角色技能数据"""
         query = """
-        SELECT fighting, firearms, dodge, mechanics, drive, stealth,
-               investigate, sleightOfHand, electronics, history, science,
-               medicine, occult, library, art, persuade, psychology
+        SELECT Fighting, Firearms, Dodge, Mechanics, Drive, Stealth,
+               Investigate, Sleight_of_Hand, Electronics, History, Science,
+               Medicine, Occult, Library_Use, Art, Persuade, Psychology
         FROM skills 
         WHERE character_id = ?
         """
@@ -174,25 +174,23 @@ class DatabaseManager:
             attribute_name - 属性名
         返回: 属性值或None
         """
-        # 标准化属性名（转换为小写）
-        normalized_name = attribute_name.lower()
         
         # 在属性中查找
         attributes = character_data.get('attributes', {})
         for key, value in attributes.items():
-            if key.lower() == normalized_name:
+            if key.lower() == attribute_name:
                 return value
         
         # 在派生属性中查找
         derived_attributes = character_data.get('derived_attributes', {})
         for key, value in derived_attributes.items():
-            if key.lower() == normalized_name:
+            if key.lower() == attribute_name:
                 return value
         
         # 在技能中查找
         skills = character_data.get('skills', {})
         for key, value in skills.items():
-            if key.lower() == normalized_name:
+            if key.lower() == attribute_name:
                 return value
         
         print(f"警告：未找到属性 '{attribute_name}'")

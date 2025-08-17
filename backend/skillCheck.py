@@ -129,7 +129,7 @@ def perform_check(skill_check_data, character_id: str):
     if not test_required:
         return "没有需要检定的技能或属性"
     
-    # 模拟获取角色数据（这里需要根据你的数据库结构来实现）
+    # 获取角色数据
     character_data = get_character_data(character_id)
     if not character_data:
         return f"错误：无法获取角色 {character_id} 的数据"
