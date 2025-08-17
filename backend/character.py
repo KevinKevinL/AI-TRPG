@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from character_state import set_current_character_id
 
-# 创建角色路由器
+# 角色路由器
 character_router = APIRouter()
 
 # 定义角色ID请求模型

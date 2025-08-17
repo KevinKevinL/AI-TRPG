@@ -7,7 +7,6 @@ from langgraph.graph import StateGraph, END
 import random
 import os
 import json
-import redis
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
@@ -15,12 +14,10 @@ import skillCheck
 from intent_recognizer import recognize_intents
 import random_event
 from character_state import get_current_character_id
+from redis_manager import get_redis_client
 
 # 加载环境变量
 load_dotenv()
-
-# 初始化Redis连接
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 # 对话历史存储的键前缀
 CONVERSATION_KEY_PREFIX = "conversation_history:"
@@ -29,6 +26,11 @@ CONVERSATION_KEY_PREFIX = "conversation_history:"
 def get_conversation_history(character_id: str) -> List[Dict[str, str]]:
     """从Redis获取对话历史"""
     try:
+        redis_client = get_redis_client()
+        if not redis_client:
+            print("Redis客户端不可用，返回空对话历史")
+            return []
+            
         key = f"{CONVERSATION_KEY_PREFIX}{character_id}"
         data = redis_client.get(key)
         if data:
@@ -41,6 +43,11 @@ def get_conversation_history(character_id: str) -> List[Dict[str, str]]:
 def save_conversation_history(character_id: str, history: List[Dict[str, str]]):
     """保存对话历史到Redis"""
     try:
+        redis_client = get_redis_client()
+        if not redis_client:
+            print("Redis客户端不可用，无法保存对话历史")
+            return
+            
         key = f"{CONVERSATION_KEY_PREFIX}{character_id}"
         # 设置过期时间为24小时
         redis_client.setex(key, 86400, json.dumps(history, ensure_ascii=False))
@@ -209,8 +216,8 @@ async def chat_endpoint(request: ChatRequest):
     if request.role == "KP":
         # 这是 KP（守密人）对话，使用 LangGraph 逻辑
         
-        # 获取角色ID，如果没有提供则使用默认值
-        character_id = request.character_id or "default_character"
+        # 获取角色ID
+        character_id = get_current_character_id()        
         
         # 从Redis获取对话历史
         conversation_history = get_conversation_history(character_id)
