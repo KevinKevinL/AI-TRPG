@@ -1,0 +1,128 @@
+
+-Goal-
+Given a text document that is potentially relevant to this activity and a list of entity types, identify all entities of those types from the text and all relationships among the identified entities.
+
+-Steps-
+1. Identify all entities. For each identified entity, extract the following information:
+- entity_name: Name of the entity, capitalized
+- entity_type: One of the following types: [investigator, NPC, mythos_entity, location, artifact, event, skill, sanity, mythos_knowledge, scenario]
+- entity_description: Comprehensive description of the entity's attributes and activities
+Format each entity as ("entity"{tuple_delimiter}<entity_name>{tuple_delimiter}<entity_type>{tuple_delimiter}<entity_description>)
+
+2. From the entities identified in step 1, identify all pairs of (source_entity, target_entity) that are *clearly related* to each other.
+For each pair of related entities, extract the following information:
+- source_entity: name of the source entity, as identified in step 1
+- target_entity: name of the target entity, as identified in step 1
+- relationship_description: explanation as to why you think the source entity and the target entity are related to each other
+- relationship_strength: an integer score between 1 to 10, indicating strength of the relationship between the source entity and target entity
+Format each relationship as ("relationship"{tuple_delimiter}<source_entity>{tuple_delimiter}<target_entity>{tuple_delimiter}<relationship_description>{tuple_delimiter}<relationship_strength>)
+
+3. Return output in Chinese as a single list of all the entities and relationships identified in steps 1 and 2. Use **{record_delimiter}** as the list delimiter.
+
+4. If you have to translate into Chinese, just translate the descriptions, nothing else!
+
+5. When finished, output {completion_delimiter}.
+
+-Examples-
+######################
+
+Example 1:
+
+entity_types: [investigator, NPC, mythos_entity, location, artifact, event, skill, sanity, mythos_knowledge, scenario]
+text:
+到黎明到来。
+　　如果调查员们丢下 NPC 们而拼命逃亡，让他们用自己的良知（理智）来为他们见死不救的行为而付出代价。甚至可以让死光一夜又一夜缓慢的在周围的村庄中造成进一步的死亡。这样他们不仅仅需要为了每个 NPC 的死亡付出 1D6San 的代价，还需要在之后的每周由于意识到死光依然在自由自在的猎食当地居民而受到 1D6 的理智丧失（有些 KP 可能会对于袖手旁观的调查员们施以进一步的惩罚）。当然，也有一些人会注意到调查员们——肮脏的怀疑将尾随着他们。
+　　假设调查员们打算通过自己的方式来消灭死光，无论他们发明出多么疯狂的实施方案，他们都必须使用电或者火来达到这一目的。如果他们成功做到了，这将会是一个真正的胜利，并且每个参与到对付死光行动的调查员都将获得1D10 的理智奖励。或许当艾米利亚生还时，他们还将获得艾米利亚的奖励以及她将和调查员们对好解释发生的一切事态的口风。口口声声向博尔顿当局申明真相，并不像号称克莱姆和比利是被风暴中的闪电击中身亡这一类的说法一样容易被接受。
+　　假设调查员们选择了控制死光这种比较黑暗的胜利方式，这将在他们的心智上留下一道创伤，具体造成多大的创伤取决于他们安排谁牺牲并成为控制死光的饵食。同样，如果去阅读并且尝试理解医生的日志，将会带来 4%的克苏鲁神话加值（初次阅读+1%，完全理解+3%，消耗 8 周，MR 6——译者，我实在判断不出来这里到底是什么的缩写了，哪位大神判断出来请联系，损失 1D4 SAN）
+
+角色列表
+艾米利亚·韦伯——半失忆状态的孙女
+
+
+　　艾米利亚是个 20 出头，看起来又瘦又憔悴但是却不失魅力的女人，她有着深黑的头发和醒目的接近无色的浅灰大眼睛，穿过丛林之后她头发凌乱、浑身淤痕并且严重的着了凉，身上的衣物也被挂得破破烂烂。只有在细心的护理和温暖的环境下她的情况才能得到好转。
+　　当她恢复过来的时候，在谈话的过程中她将显示出受过良好的国际性教育的特质，以及一口中产阶级特质的浓厚博尔顿口音。由于最近收到的惊吓，她将处于一种茫然、紧张并且呆滞的状态中，只有被准确的提问时她才会做出回应（成功的魅力或者说服将会有一定的帮助）。
+　　她不会故意撒谎或者掩饰什么，除非被认为是“疯了”——她 15 岁时由于双亲去世，曾经在波士顿的社会少女疗养院中接受过一段时间的严重情绪失控以及黑夜恐惧症治疗—
+—�
+------------------------
+output:
+("entity"{tuple_delimiter}调查员{tuple_delimiter}investigator{tuple_delimiter}调查员们在面对死光时需要做出选择，他们的行为将影响他们的理智和良知)
+{record_delimiter}
+("entity"{tuple_delimiter}NPC{tuple_delimiter}NPC{tuple_delimiter}NPC们可能会因为调查员的选择而受到影响，他们的死亡会导致调查员理智的丧失)
+{record_delimiter}
+("entity"{tuple_delimiter}死光{tuple_delimiter}mythos_entity{tuple_delimiter}死光是一种神秘的现象，能够造成死亡，调查员需要使用电或火来消灭它)
+{record_delimiter}
+("entity"{tuple_delimiter}艾米利亚·韦伯{tuple_delimiter}NPC{tuple_delimiter}艾米利亚是一个20多岁的女性，半失忆状态，具有国际性教育背景和博尔顿口音)
+{record_delimiter}
+("entity"{tuple_delimiter}博尔顿{tuple_delimiter}location{tuple_delimiter}博尔顿是一个地方，艾米利亚的口音显示她与此地有联系)
+{record_delimiter}
+("entity"{tuple_delimiter}医生的日志{tuple_delimiter}artifact{tuple_delimiter}医生的日志可以增加克苏鲁神话知识，但阅读和理解会导致理智的损失)
+{record_delimiter}
+("entity"{tuple_delimiter}克苏鲁神话{tuple_delimiter}mythos_knowledge{tuple_delimiter}克苏鲁神话知识可以通过阅读医生的日志获得加值)
+{record_delimiter}
+("entity"{tuple_delimiter}理智{tuple_delimiter}sanity{tuple_delimiter}调查员的理智会因不同的选择和事件而增加或减少)
+{record_delimiter}
+("relationship"{tuple_delimiter}调查员{tuple_delimiter}死光{tuple_delimiter}调查员需要面对死光并做出选择，影响他们的理智和良知{tuple_delimiter}8)
+{record_delimiter}
+("relationship"{tuple_delimiter}调查员{tuple_delimiter}艾米利亚·韦伯{tuple_delimiter}调查员可能会帮助艾米利亚恢复，并从她那里获得信息{tuple_delimiter}6)
+{record_delimiter}
+("relationship"{tuple_delimiter}艾米利亚·韦伯{tuple_delimiter}博尔顿{tuple_delimiter}艾米利亚的口音显示她与博尔顿有联系{tuple_delimiter}5)
+{record_delimiter}
+("relationship"{tuple_delimiter}医生的日志{tuple_delimiter}克苏鲁神话{tuple_delimiter}阅读医生的日志可以增加克苏鲁神话知识{tuple_delimiter}7)
+{record_delimiter}
+("relationship"{tuple_delimiter}医生的日志{tuple_delimiter}理智{tuple_delimiter}阅读和理解医生的日志会导致理智的损失{tuple_delimiter}6)
+{completion_delimiter}
+#############################
+
+
+Example 2:
+
+entity_types: [investigator, NPC, mythos_entity, location, artifact, event, skill, sanity, mythos_knowledge, scenario]
+text:
+�印记——念动咒语（日记上以读音的方式记录着）并且打开匣子。就那么简单，死光将会把受害者吃成骨灰，并且最后饱到涨的带着这些骨灰回到匣子中，并且被医生大声念诵的这种球外语咒文所束缚。
+
+　　调查员们如若发现了这种方法，将可以重复它以便控制死光——当然，他们必须找到一个用以牺牲的受害者。
+开端
+马路上的遭遇
+大声向玩家们宣读以下段落的原文或者你自己的修改版：
+
+　　尽管你们向北努力的逃离这场暴雨的侵袭，风暴最终还是追上了你，并且在风暴中漆黑而不断被闪电撕裂的夜幕降临了。大雨磅礴的路面上你们只能如同爬行般的缓速挪动，这样穿过黑暗的前灯才能保证你们没有迷路。唯一可以肯定的就是，目前正在身后向你们逼近的恶劣气候，只将会比你们正在经历的更加糟糕。本应善乏可陈的旅程也因此而变得危险而前途叵测。
+　　有东西毫无预示的挡在了你们的面前，这是一个如同凭空冒出来般的苍白身影。为避免撞上去而紧急的刹车和扭转车头的时间，你们刚好看清了这个身影是一个女人——她大大的睁着眼睛并发出凄厉的惨叫声。
+
+
+　　多亏他们龟爬式的车速，调查员们没有撞上这个女人，当然，KP 也可以考虑要求驾驶员进行一次自动车辆驾驶检定并添加相应的戏剧效果。例如失败将意味着汽车擦着她撞了过去，把被擦伤了的她刮倒在地。（译者：大成功就是优雅的停下来绅士风度的问“小姐，您需要帮助吗”这样？）
+　　这个女人就是艾米利亚·韦伯（详见角色信息表），她正因惊吓和身体承受极限的寒冷而处于神志恍惚之中。她目前的穿着很明显不适合在户外活动，雨水已经浸透了她的衣物。除了披头散发外，她的衣服也在跑过树林时也被划破了，而她身上还有点点淤青（通过急救或者医学检定可以从这些淤青的成色判断出它们至少是一个小时前留下的了）。
+　　她并没携带任何的身份标示或者珠宝首饰，仅带着一条装饰着某个似乎是古代金币的老旧银质挂坠（详见下面的介绍）。
+古老的金币式挂坠
+　　一件来自其祖父，被艾米利亚视作珍宝的礼物，她将会非常小心的避免遗失或者损伤这个挂坠。这个从兑换价来看大约值 60-100 美元的挂坠对于艾米利亚可是无价之宝。这个硬币状的勋章上面有着一连串无法确定是否是字迹的不规则符号。如若成功的通过克苏鲁神话检定将会发现这些符号是由阿克洛语（ 译者：， 资料来自贴吧， 作者无形吹奏者， http://tieba.baidu.com/p
+------------------------
+output:
+("entity"{tuple_delimiter}死光{tuple_delimiter}mythos_entity{tuple_delimiter}死光是一种神秘的力量，可以通过念动咒语和打开匣子来召唤，它会将受害者化为骨灰并带回匣子中，被球外语咒文所束缚)
+{record_delimiter}
+("entity"{tuple_delimiter}调查员{tuple_delimiter}investigator{tuple_delimiter}调查员是游戏中的角色，他们可以发现并重复控制死光的方法，但需要找到一个牺牲的受害者)
+{record_delimiter}
+("entity"{tuple_delimiter}风暴{tuple_delimiter}event{tuple_delimiter}风暴是调查员们在逃离过程中遇到的恶劣天气，带来了危险和不确定性)
+{record_delimiter}
+("entity"{tuple_delimiter}艾米利亚·韦伯{tuple_delimiter}NPC{tuple_delimiter}艾米利亚·韦伯是一个在风暴中被调查员们发现的女人，她因惊吓和寒冷而神志恍惚，身上有淤青)
+{record_delimiter}
+("entity"{tuple_delimiter}古老的金币式挂坠{tuple_delimiter}artifact{tuple_delimiter}古老的金币式挂坠是艾米利亚·韦伯的祖父留给她的珍宝，上面有无法确定的符号，价值60-100美元)
+{record_delimiter}
+("entity"{tuple_delimiter}阿克洛语{tuple_delimiter}mythos_knowledge{tuple_delimiter}阿克洛语是一种神秘的语言，符号出现在古老的金币式挂坠上)
+{record_delimiter}
+("relationship"{tuple_delimiter}死光{tuple_delimiter}调查员{tuple_delimiter}调查员可以通过发现的方法控制死光，但需要牺牲受害者{tuple_delimiter}7)
+{record_delimiter}
+("relationship"{tuple_delimiter}风暴{tuple_delimiter}调查员{tuple_delimiter}调查员在风暴中努力逃离，风暴带来了危险和不确定性{tuple_delimiter}6)
+{record_delimiter}
+("relationship"{tuple_delimiter}艾米利亚·韦伯{tuple_delimiter}古老的金币式挂坠{tuple_delimiter}艾米利亚·韦伯拥有古老的金币式挂坠，这是她的珍宝{tuple_delimiter}8)
+{record_delimiter}
+("relationship"{tuple_delimiter}古老的金币式挂坠{tuple_delimiter}阿克洛语{tuple_delimiter}古老的金币式挂坠上有阿克洛语符号{tuple_delimiter}5)
+{completion_delimiter}
+#############################
+
+
+
+-Real Data-
+######################
+entity_types: [investigator, NPC, mythos_entity, location, artifact, event, skill, sanity, mythos_knowledge, scenario]
+text: {input_text}
+######################
+output:

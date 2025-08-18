@@ -45,8 +45,8 @@ def recognize_intents(player_input: str) -> List[str]:
         response = llm_with_tools.invoke(messages)
         intents = response.intents
         
-        # 随机添加随机事件（50%概率）
-        if random.random() < 0.5:
+        # 随机添加随机事件（10%概率）
+        if random.random() < 0.1:
             if "random_event" not in intents:
                 intents.append("random_event")
         
