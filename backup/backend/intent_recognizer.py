@@ -9,7 +9,7 @@ from typing import List
 
 class RouterOutput(BaseModel):
     intents: List[str] = Field(
-        description="玩家的意图列表，可以是 'skill_check', 'dialogue', 'info_retrieval' 中的一个或多个。"
+        description="玩家的意图列表，可以是 'skill_check', 'dialogue' 中的一个或多个。"
     )
 
 def recognize_intents(player_input: str) -> List[str]:
@@ -32,11 +32,9 @@ def recognize_intents(player_input: str) -> List[str]:
     意图列表包括：
     - 'skill_check': 当玩家想要进行某项技能检定时。例如："我要进行力量检定" 或 "我尝试说服他"。
     - 'dialogue': 当玩家想要和npc进行普通的对话时。例如："你好"这样的对话内容，或是玩家有和npc对话的意图。
-    - 'info_retrieval': 当玩家试图获取背景信息或物品信息时。例如："告诉我这个地方的历史" 或 "这把剑是什么来头？"。
-    - 'random_event': 当玩家的输入可能触发一个随机事件时。请判断玩家是否使用了类似 "探索", "搜索" 或其他可能触发随机事件的词语。
 
     如果玩家的输入包含多种意图，请返回一个包含所有意图的列表。
-    如果无法识别出任何特定意图，请默认返回 ['info_retrieval']。
+    如果无法识别出任何特定意图，请默认返回 []。
     """
     
     messages = [SystemMessage(content=system_message), HumanMessage(content=player_input)]

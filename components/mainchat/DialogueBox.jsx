@@ -23,6 +23,7 @@ export default function DialogueBox({ messages, setMessages }) {
       const response = await axios.post("/api/chat", {
         input,
         role: "KP", // 使用 KP 身份对话
+        module: "dead_light" // 指定模组为dead_light
       });
 
       let reply;

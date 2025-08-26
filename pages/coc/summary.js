@@ -33,9 +33,52 @@ const SummaryPage = () => {
         const background = await loadBackground(currentCharacterId);
 
         // 合并前端保存的角色数据与数据库的背景信息
+        const normalize = (data) => {
+          if (!data) return data;
+          const normalized = { ...data };
+          // 规范化 attributes 的派生字段命名
+          if (normalized.attributes) {
+            const a = normalized.attributes;
+            normalized.attributes = {
+              ...a,
+              magic_points: a.magic_points ?? a.magicPoints ?? a.mp ?? a.magic ?? a["magic_points"],
+              interest_points: a.interest_points ?? a.interestPoints ?? a["interest_points"],
+              hit_points: a.hit_points ?? a.hitPoints ?? a.hp ?? a["hit_points"],
+              move_rate: a.move_rate ?? a.moveRate ?? a["move_rate"],
+              damage_bonus: a.damage_bonus ?? a.damageBonus ?? a.db ?? a["damage_bonus"],
+              professional_points: a.professional_points ?? a.professionalPoints ?? a["professional_points"],
+            };
+          }
+          // 规范化 skills 命名
+          if (normalized.skills) {
+            const s = normalized.skills;
+            normalized.skills = {
+              ...s,
+              sleight_of_hand: s.sleight_of_hand ?? s.sleightOfHand,
+              library_use: s.library_use ?? s.library,
+            };
+          }
+          return normalized;
+        };
+
         const completeCharacterData = {
-          ...savedCharacter,
-          background,
+          ...normalize(savedCharacter),
+          background: background ?? {
+            beliefs: null,
+            beliefs_details: null,
+            important_people: null,
+            important_people_details: null,
+            reasons: null,
+            reasons_details: null,
+            places: null,
+            places_details: null,
+            possessions: null,
+            possessions_details: null,
+            traits: null,
+            traits_details: null,
+            keylink: null,
+            keylink_details: null,
+          },
         };
 
         setCharacterData(completeCharacterData);
@@ -83,12 +126,13 @@ const SummaryPage = () => {
         metadata: formData,
       };
 
+      console.log(completeCharacterData);
       // 构造用于生成角色描述的提示字符串
       const prompt = `
-请根据以下角色信息生成一个完整的人物描述，用于克苏鲁的呼唤跑团游戏。描述应涵盖角色的背景、性格、特质、技能等，并且风格沉浸、有理有据。请确保描述与角色信息匹配，不要添加虚假信息。
-
-角色信息：
-${JSON.stringify(completeCharacterData, null, 2)}
+        请根据以下角色信息生成一个完整的人物描述，用于克苏鲁的呼唤跑团游戏。并且风格沉浸、有理有据。
+        对于背景部分，重点考虑 keylink_details 的信息。
+        角色信息：
+        ${JSON.stringify(completeCharacterData, null, 2)}
       `;
 
       // 调用独立的 AI 接口生成角色描述

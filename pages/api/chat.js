@@ -41,13 +41,17 @@ export default async function handler(req, res) {
   try {
     const pythonBackendUrl = "http://localhost:8000/api/chat";
 
-    // 向你的 Python 后端发送请求
+    // 向你的 Python 后端发送请求，包含module字段
     const backendResponse = await fetch(pythonBackendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ input, role, module }),
+      body: JSON.stringify({ 
+        input, 
+        role, 
+        module: module || null  // 确保module字段被传递，如果未提供则为null
+      }),
     });
 
     if (!backendResponse.ok) {

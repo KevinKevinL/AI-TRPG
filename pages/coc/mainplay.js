@@ -14,9 +14,13 @@ export default function MainPlay() {
   // 从 DatabaseManager 获取当前角色ID
   const { currentCharacterId } = DatabaseManager();
   const [messages, setMessages] = useState([
-    { sender: 'KP', text: '在风暴肆虐的黑夜中，调查员正驱车前往阿卡姆...' },
+    { sender: 'KP', text: '夜幕如同黑色的裹尸布，将世界包裹得严严实实。你从阿卡姆启程，正驱车前往外地处理一桩棘手的委托。然而，一场突如其来的风暴彻底打乱了你的计划。豆大的雨点疯狂地砸向车顶，闪电撕裂漆黑的夜空，照亮了车窗上扭曲的雨痕。你的车只能像一只爬行的甲虫，在泥泞的道路上缓慢挪动，努力用前灯的光穿透雨幕，避免迷失方向......' },
   ]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // 新增：骰子相关状态
+  const [diceRollData, setDiceRollData] = useState(null);
+  const [diceHistory, setDiceHistory] = useState([]);
 
   useEffect(() => {
     const handleEsc = (event) => {
@@ -30,7 +34,7 @@ export default function MainPlay() {
     };
   }, []);
 
-  // 新增：当角色ID存在时，发送到后端
+  // 新增：当角色ID存在时，发送到后端（FastAPI）并后续读取Redis
   useEffect(() => {
     if (currentCharacterId) {
       const sendCharacterIdToBackend = async () => {
@@ -44,7 +48,7 @@ export default function MainPlay() {
               character_id: currentCharacterId
             })
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             console.log('角色ID已发送到后端:', data);
@@ -60,6 +64,22 @@ export default function MainPlay() {
     }
   }, [currentCharacterId]);
 
+  // 新增：处理骰子结果
+  const handleDiceRoll = (rollData) => {
+    setDiceHistory(prev => [rollData, ...prev.slice(0, 9)]); // 保留最近10次
+    
+    // 如果是技能检定结果，添加到聊天消息
+    if (rollData.skill && rollData.threshold) {
+      const message = {
+        sender: 'System',
+        text: `🎲 ${rollData.skill}检定: ${rollData.result}/${rollData.threshold} - ${rollData.success ? '成功' : '失败'} (难度: ${rollData.difficulty})`,
+        timestamp: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, message]);
+    }
+  };
+
+
   return (
     <div className="flex h-screen bg-slate-950">
       {/* Main Content Area */}
@@ -68,7 +88,7 @@ export default function MainPlay() {
         <div className="flex-1 relative">
           {/* Top Bar */}
           <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center">
-            <button 
+            <button
               className="p-2 rounded-lg bg-emerald-800/80 hover:bg-emerald-700/80 transition-colors"
               onClick={() => setIsModalOpen(true)}
             >
@@ -93,7 +113,7 @@ export default function MainPlay() {
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 to-slate-950/60" />
                 <RainEffect intensity={3} color="rgba(204, 230, 255, 0.4)" speed={70} />
               </div>
-              
+
               {/* Chat Interface Layer */}
               <div className="relative h-full z-10">
                 <DialogueBox
@@ -108,7 +128,10 @@ export default function MainPlay() {
         {/* Right Panel Section */}
         <div className="w-64 p-4 space-y-4 bg-slate-900/60 backdrop-blur-sm flex flex-col">
           <div className="bg-emerald-0 rounded-lg">
-            <DicePanel />
+            <DicePanel 
+              onDiceRoll={handleDiceRoll}
+              externalRollData={diceRollData}
+            />
           </div>
           <div className="bg-emerald-0 rounded-lg">
             <Panel title="快捷操作" />
@@ -123,7 +146,7 @@ export default function MainPlay() {
       </div>
 
       {/* Modal */}
-      <div 
+      <div
         className={`fixed inset-y-0 left-0 z-50 w-3/7 transition-transform duration-300 ease-in-out transform ${
           isModalOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
@@ -158,7 +181,7 @@ export default function MainPlay() {
       </div>
 
       {isModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300"
           onClick={() => setIsModalOpen(false)}
         />

@@ -5,23 +5,6 @@ import os
 from typing import Dict, Any, Optional, List
 
 class DatabaseManager:
-    def select_mapid_by_characterid(self, character_id):
-        """
-        根据角色ID查询对应的地图ID
-        """
-        query = "SELECT mapId FROM characters WHERE id = ?"
-        result = self.execute_query(query, (character_id,))
-        # print(character_id)
-        return result[0]['mapId'] if result else None
-
-    def select_eventinfo_by_mapid(self, map_id):
-        """
-        根据地图ID查询事件信息、发生率和结果
-        """
-        query = "SELECT event_info, rate, testRequired, successResult, failsureResult, hard_level FROM events WHERE map_ids = ?"
-        result = self.execute_query(query, (map_id,))
-        return result if result else None
-    
     def __init__(self, db_path: str = None):
         """
         初始化数据库管理器
@@ -86,6 +69,7 @@ class DatabaseManager:
         finally:
             conn.close()
     
+    #角色相关
     def get_character_data(self, character_id: str) -> Optional[Dict[str, Any]]:
         """
         获取角色的完整数据
@@ -128,7 +112,7 @@ class DatabaseManager:
     def get_character_info(self, character_id: str) -> Optional[Dict[str, Any]]:
         """获取角色基础信息"""
         query = """
-        SELECT * FROM Characters 
+        SELECT * FROM characters 
         WHERE id = ?
         """
         result = self.execute_query(query, (character_id,))
@@ -153,9 +137,9 @@ class DatabaseManager:
     def get_character_derived_attributes(self, character_id: str) -> Dict[str, int]:
         """获取角色派生属性数据"""
         query = """
-        SELECT sanity, magicPoints, interestPoints, hitPoints, 
-               moveRate, damageBonus, build, professionalPoints
-        FROM derivedattributes
+        SELECT sanity, magic_points, interest_points, hit_points, 
+               move_rate, damage_bonus, build, professional_points
+        FROM derived_attributes
         WHERE character_id = ?
         """
         result = self.execute_query(query, (character_id,))
@@ -169,10 +153,10 @@ class DatabaseManager:
     def get_character_skills(self, character_id: str) -> Dict[str, int]:
         """获取角色技能数据"""
         query = """
-        SELECT Fighting, Firearms, Dodge, Mechanics, Drive, Stealth,
-               Investigate, Sleight_of_Hand, Electronics, History, Science,
-               Medicine, Occult, Library_Use, Art, Persuade, Psychology
-        FROM skills 
+        SELECT fighting, firearms, dodge, mechanics, drive, stealth,
+               investigate, sleight_of_hand, electronics, history, science,
+               medicine, occult, library_use, art, persuade, psychology
+        FROM skills
         WHERE character_id = ?
         """
         result = self.execute_query(query, (character_id,))
@@ -195,19 +179,19 @@ class DatabaseManager:
         # 在属性中查找
         attributes = character_data.get('attributes', {})
         for key, value in attributes.items():
-            if key.lower() == attribute_name:
+            if key == attribute_name:
                 return value
         
         # 在派生属性中查找
         derived_attributes = character_data.get('derived_attributes', {})
         for key, value in derived_attributes.items():
-            if key.lower() == attribute_name:
+            if key == attribute_name:
                 return value
         
         # 在技能中查找
         skills = character_data.get('skills', {})
         for key, value in skills.items():
-            if key.lower() == attribute_name:
+            if key == attribute_name:
                 return value
         
         print(f"警告：未找到属性 '{attribute_name}'")
@@ -221,51 +205,6 @@ class DatabaseManager:
         ORDER BY name
         """
         return self.execute_query(query) or []
-    
-    def create_character(self, character_data: Dict[str, Any]) -> bool:
-        """
-        创建新角色
-        参数: character_data - 角色数据
-        返回: 是否创建成功
-        """
-        try:
-            # 这里可以实现角色创建逻辑
-            # 由于涉及多个表的插入，需要事务处理
-            print("角色创建功能待实现")
-            return False
-        except Exception as e:
-            print(f"创建角色失败: {e}")
-            return False
-    
-    def update_character(self, character_id: str, updates: Dict[str, Any]) -> bool:
-        """
-        更新角色数据
-        参数: 
-            character_id - 角色ID
-            updates - 要更新的数据
-        返回: 是否更新成功
-        """
-        try:
-            # 这里可以实现角色更新逻辑
-            print("角色更新功能待实现")
-            return False
-        except Exception as e:
-            print(f"更新角色失败: {e}")
-            return False
-    
-    def delete_character(self, character_id: str) -> bool:
-        """
-        删除角色
-        参数: character_id - 角色ID
-        返回: 是否删除成功
-        """
-        try:
-            # 这里可以实现角色删除逻辑
-            print("角色删除功能待实现")
-            return False
-        except Exception as e:
-            print(f"删除角色失败: {e}")
-            return False
 
 # 创建全局数据库管理器实例
 db_manager = DatabaseManager()

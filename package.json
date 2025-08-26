@@ -46,6 +46,7 @@
     "langchain": "^0.3.11",
     "lucide-react": "^0.456.0",
     "minisearch": "^7.1.1",
+    "number-flip": "^1.2.3",
     "openai": "^4.79.0",
     "pdf-parse": "^1.1.1",
     "react": "^19.1.1",

@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from character_state import set_current_character_id
 from databaseManager import db_manager
-from redis_manager import save_character_data_to_redis
+from redis_manager import save_character_data_to_redis, get_character_status_from_redis, get_character_data_from_redis
 import json
 
 character_router = APIRouter()
@@ -45,8 +45,9 @@ async def handle_character_entered(request: CharacterIdRequest):
             "current_location": "起始位置",  # 默认起始位置
             "current_map_id": "1",  # 默认地图ID
             "sanity": character_derived_attributes.get("sanity", 99),
-            "health": character_derived_attributes.get("hitPoints", 10),
-            "magic": character_derived_attributes.get("magicPoints", 10)
+            "hit_points": character_derived_attributes.get("hit_points", 10),
+            "magic_points": character_derived_attributes.get("magic_points", 10),
+            "happening_event_id": -1  # 当前正在进行的事件ID，-1表示无事件
         }
         
         # 使用新的Redis管理函数保存数据
@@ -68,3 +69,25 @@ async def handle_character_entered(request: CharacterIdRequest):
     except Exception as e:
         print(f"处理角色进入时出错: {e}")
         raise HTTPException(status_code=500, detail="处理角色进入时出错")
+
+
+@character_router.get("/character_status")
+async def api_get_character_status(character_id: str):
+    """获取Redis中的角色当前状态（hit_points/sanity/magic_points等）。"""
+    try:
+        status = get_character_status_from_redis(character_id)
+        return status
+    except Exception as e:
+        print(f"获取角色状态失败: {e}")
+        raise HTTPException(status_code=500, detail="获取角色状态失败")
+
+
+@character_router.get("/character_data")
+async def api_get_character_data(character_id: str):
+    """获取Redis中的完整角色数据（info/attributes/skills/derived_attributes/status等整合）。"""
+    try:
+        data = get_character_data_from_redis(character_id)
+        return data
+    except Exception as e:
+        print(f"获取角色数据失败: {e}")
+        raise HTTPException(status_code=500, detail="获取角色数据失败")

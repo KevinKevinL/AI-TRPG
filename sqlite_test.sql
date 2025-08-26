@@ -71,8 +71,8 @@ INSERT INTO "backgrounds" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb87260243
 -- ----------------------------
 -- Table structure for characterequipment
 -- ----------------------------
-DROP TABLE IF EXISTS "characterequipment";
-CREATE TABLE "characterequipment" (
+DROP TABLE IF EXISTS "character_equipment";
+CREATE TABLE "character_equipment" (
   "character_id" char(64) NULL,
   "equipment_id" int NULL,
   "on_bag" tinyint(1) NULL,
@@ -84,7 +84,7 @@ CREATE TABLE "characterequipment" (
 -- ----------------------------
 -- Records of characterequipment
 -- ----------------------------
-INSERT INTO "characterequipment" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', NULL, NULL, 1);
+INSERT INTO "character_equipment" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', NULL, NULL, 1);
 
 -- ----------------------------
 -- Table structure for characters
@@ -123,28 +123,28 @@ INSERT INTO "characters" VALUES ('ee491f447b5f83b327c89339d8b7ee3da529704d2ee674
 -- ----------------------------
 -- Table structure for derivedattributes
 -- ----------------------------
-DROP TABLE IF EXISTS "derivedattributes";
-CREATE TABLE "derivedattributes" (
+DROP TABLE IF EXISTS "derived_attributes";
+CREATE TABLE "derived_attributes" (
   "character_id" char(64) NULL,
   "sanity" int NULL,
-  "magicPoints" int NULL,
-  "interestPoints" int NULL,
-  "hitPoints" int NULL,
-  "moveRate" int NULL,
-  "damageBonus" text NULL,
+  "magic_points" int NULL,
+  "interest_points" int NULL,
+  "hit_points" int NULL,
+  "move_rate" int NULL,
+  "damage_bonus" text NULL,
   "build" int NULL,
-  "professionalPoints" int NULL,
+  "professional_points" int NULL,
   UNIQUE ("character_id")
 );
 
 -- ----------------------------
 -- Records of derivedattributes
 -- ----------------------------
-INSERT INTO "derivedattributes" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', 50, 0, 0, 9, 8, '0', 0, 0);
-INSERT INTO "derivedattributes" VALUES ('7ba3a38b9c4823d46ba1063a735bedd2bd08394325d63d1e71061a17eb6706d5', 60, 12, 100, 12, 7, '0', 0, 320);
-INSERT INTO "derivedattributes" VALUES ('92de5b9900c85db83b1f662616efbc19a95728d122b06624825cb51e5d8c8a0e', 60, 12, 150, 12, 7, '0', 0, 248);
-INSERT INTO "derivedattributes" VALUES ('e11ad2911da9f6d3d73dbc6129318d3a8d6184ccb7ad63693e35ca441652b10c', 55, 11, 120, 11, 7, '0', 0, 360);
-INSERT INTO "derivedattributes" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb8726024325b6b0de46e2808905d', 65, 13, 130, 11, 8, '+1D4', 1, 264);
+INSERT INTO "derived_attributes" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', 50, 0, 0, 9, 8, '0', 0, 0);
+INSERT INTO "derived_attributes" VALUES ('7ba3a38b9c4823d46ba1063a735bedd2bd08394325d63d1e71061a17eb6706d5', 60, 12, 100, 12, 7, '0', 0, 320);
+INSERT INTO "derived_attributes" VALUES ('92de5b9900c85db83b1f662616efbc19a95728d122b06624825cb51e5d8c8a0e', 60, 12, 150, 12, 7, '0', 0, 248);
+INSERT INTO "derived_attributes" VALUES ('e11ad2911da9f6d3d73dbc6129318d3a8d6184ccb7ad63693e35ca441652b10c', 55, 11, 120, 11, 7, '0', 0, 360);
+INSERT INTO "derived_attributes" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb8726024325b6b0de46e2808905d', 65, 13, 130, 11, 8, '+1D4', 1, 264);
 
 -- ----------------------------
 -- Table structure for equipment
@@ -167,26 +167,48 @@ CREATE TABLE "equipment" (
 -- Table structure for events
 -- ----------------------------
 DROP TABLE IF EXISTS "events";
+-- 创建 'events' 表
 CREATE TABLE "events" (
-  "id" INTEGER PRIMARY KEY,
-  "event_info" text NULL,
-  "rate" int NULL,
-  "character_ids" text NULL,
-  "map_ids" text NULL,
-  "if_unique" tinyint(1) NULL,
-  "afterevents" int NULL,
-  "beforeevents" int NULL,
-  "result" text NULL,
-  "if_happened" tinyint(1) NULL,
-  CONSTRAINT "Events_ibfk_1" FOREIGN KEY ("afterevents") REFERENCES "events" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT "Events_ibfk_2" FOREIGN KEY ("beforeevents") REFERENCES "events" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
+ "event_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+ "event_info" TEXT NULL,
+ "map_id" INTEGER NULL,
+ "if_unique" INTEGER NULL,
+ "pre_event_ids" TEXT NULL,
+ "happened_result" INTEGER NULL,
+ "test_required_id" INTEGER NULL,
+ "hard_level" INTEGER NULL,
+ "success_modify_id" INTEGER NULL,
+ "success_modify_num" INTEGER NULL,
+ "fail_modify_id" INTEGER NULL,
+ "fail_modify_num" INTEGER NULL,
+ "success_result_info" TEXT NULL,
+ "fail_result_info" TEXT NULL
 );
 
--- ----------------------------
 -- Records of events
--- ----------------------------
-INSERT INTO "events" VALUES (1, '调查员注意到了艾米莉亚脖子上戴着一个样式古老的金币式挂坠，艾米莉亚似乎对这个挂坠视若珍宝。', 50, 'ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', '1', 1, 2, NULL, '{\r\n    \"testRequired\": 10,\r\n    \"testCharacterId\": \"ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7\",\r\n    \"talkRequired\": 0,\r\n    \"talkToWhom\": \"\" ,\r\n    \"fightRequired\": 0,\r\n    \"successEffect\": \"调查员发现这些符号是阿克洛语字符。Aklo语不是一种日常语言，很可能是一种祭司阶级在祭典上专用的皇家语言。\",\r\n    \"failEffect\": \"看着这些符号，调查员感到一阵头晕，仿佛有一种无形的力量在干扰他的思维。\",\r\n    \"additionalEffect\": \"\",\r\n    \"successModify\":23,\r\n    \"successModifyNum\":1,\r\n    \"failModify\":23,\r\n    \"failModifyNum\":-1\r\n}', 1);
-INSERT INTO "events" VALUES (2, 'sdfaw ', 50, 'ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c4', '1', 1, NULL, NULL, 'saef ', 1);
+INSERT INTO "events" ("event_id", "event_info", "map_id", "if_unique", "pre_event_ids", "happened_result", "test_required_id", "hard_level", "success_modify_id", "success_modify_num", "fail_modify_id", "fail_modify_num", "success_result_info", "fail_result_info") VALUES
+(1, '调查员驾车在阿卡姆郊外行驶，遭遇突如其来的风暴。', 1, 1, NULL, -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(2, '艾米利亚·韦伯突然出现在马路中央，调查员紧急刹车以避免撞上她。', 1, 1, '1', -1, 22, 2, NULL, NULL, 10, -1, '调查员成功停车，艾米利亚未受伤，调查员可以下车与她交谈。', '汽车擦过艾米利亚，导致她被擦伤并倒地。'),
+(3, '调查员决定不下车帮助艾米利亚，驱车离开。', 1, 1, '2', -1, NULL, NULL, 10, -1, NULL, NULL, '调查员驱车离去，将艾米利亚留在风暴中。', '艾米利亚的惨叫声在身后渐行渐远。'),
+(5, '调查员下车帮助艾米利亚。', 1, 1, '2', -1, NULL, NULL, NULL, NULL, NULL, NULL, '为艾米利亚提供庇护、保暖或急救。', NULL),
+(6, '通过急救或医学检定，判断艾米利亚身上的淤青是在一小时前留下的。', 1, 0, '5', -1, 29, 2, NULL, NULL, NULL, NULL, '调查员成功判断出淤青的时间。', '调查员未能判断出淤青的时间。'),
+(7, '调查员试图与艾米利亚交谈，但艾米利亚精神恍惚。', 1, 0, '5', -1, 34, 2, NULL, NULL, NULL, NULL, '调查员通过规避敏感词汇，避免艾米利亚情绪进一步恶化。', '艾米利亚情绪激动，更加痛苦。'),
+(8, '调查员观察艾米利亚身上的古老金币式挂坠。', 1, 0, '5', -1, 30, 3, NULL, NULL, NULL, NULL, '调查员成功辨认出挂坠上的符号是古老的阿克洛语符号。', '调查员未能辨认出符号，只觉得它很古怪。'),
+(9, '艾米利亚提到“祖父”或“光”等词汇。', 1, 0, '7', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, '调查员在原地停留，风暴恶化。', 1, 0, '5', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, '汽车因风暴肆虐而抛锚。', 1, 1, '10', -1, 22, 3, NULL, NULL, 10, -1, '汽车成功抵抗风暴，继续前行。', '汽车抛锚，无法继续使用。'),
+(12, '调查员在暴风雨中离开汽车，全身衣物被浸湿。', 1, 0, '10', -1, 2, 2, NULL, NULL, 13, -1, '调查员成功抵抗严寒。', '调查员体温下降，受到寒冷伤害。'),
+(13, '调查员向本地人询问附近情况。', 1, 0, '5', -1, 33, 1, NULL, NULL, NULL, NULL, '调查员成功得知附近一英里内有带咖啡馆的加油站。', '未能获得有用信息。'),
+(14, '调查员进入附近丛林进行搜寻。', 1, 0, '5', -1, 7, 3, NULL, NULL, 10, -1, '调查员感到被注视的不安感，但无所发现。', '调查员感到极度不安，可能遭遇死光。'),
+(15, '调查员在丛林中遭遇死光。', 1, 1, '14', -1, NULL, NULL, 10, -3, NULL, NULL, NULL, '调查员被怪异的模糊影子跟踪或攻击。'),
+(16, '调查员决定折返回阿卡姆。', 1, 0, '5', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(17, '汽车因天气恶劣而熄火、打滑或出车祸。', 1, 1, '16', -1, 22, 2, NULL, NULL, 10, -1, '调查员成功驾驶汽车返回。', '汽车发生故障，无法前进。'),
+(18, '调查员折返时遭遇死光攻击。', 1, 1, '17', -1, NULL, NULL, 10, -3, NULL, NULL, NULL, '死光对调查员发起攻击。'),
+(19, '一棵被闪电击倒的大树挡住去路。', 1, 1, '17', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(20, '调查员与艾米利亚同行，并载她离开。', 1, 0, '5,23', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(21, '在闪电时，调查员观察路边的树林。', 1, 0, '20', -1, 24, 3, NULL, NULL, NULL, NULL, '调查员成功发现潜藏在树林后的古怪白光。', '调查员未能发现白光。'),
+(22, '死光开始追踪并攻击调查员的车辆。', 1, 1, '3', -1, NULL, NULL, 10, -1, NULL, NULL, NULL, '调查员开始被一团模糊的影子跟踪，感到莫大的危机。'),
+(23, '调查员询问艾米利亚的名字。', 1, 0, '5', -1, 34, 2, NULL, NULL, NULL, NULL, '艾米利亚在恍惚中说出了自己的名字：艾米利亚·韦伯。', '艾米利亚神志不清，未能回答调查员的问题。');
 
 -- ----------------------------
 -- Table structure for maps
@@ -247,23 +269,23 @@ INSERT INTO "professions" VALUES (20, '部落成员', '我是一位与自然紧�
 DROP TABLE IF EXISTS "skills";
 CREATE TABLE "skills" (
   "character_id" char(64) NULL,
-  "Fighting" int NULL,
-  "Firearms" int NULL,
-  "Dodge" int NULL,
-  "Mechanics" int NULL,
-  "Drive" int NULL,
-  "Stealth" int NULL,
-  "Investigate" int NULL,
-  "Sleight_of_Hand" int NULL,
-  "Electronics" int NULL,
-  "History" int NULL,
-  "Science" int NULL,
-  "Medicine" int NULL,
-  "Occult" int NULL,
-  "Library_Use" int NULL,
-  "Art" int NULL,
-  "Persuade" int NULL,
-  "Psychology" int NULL,
+  "fighting" int NULL,
+  "firearms" int NULL,
+  "dodge" int NULL,
+  "mechanics" int NULL,
+  "drive" int NULL,
+  "stealth" int NULL,
+  "investigate" int NULL,
+  "sleight_of_hand" int NULL,
+  "electronics" int NULL,
+  "history" int NULL,
+  "science" int NULL,
+  "medicine" int NULL,
+  "occult" int NULL,
+  "library_use" int NULL,
+  "art" int NULL,
+  "persuade" int NULL,
+  "psychology" int NULL,
   UNIQUE ("character_id"),
   CONSTRAINT "Skills_ibfk_1" FOREIGN KEY ("character_id") REFERENCES "characters" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
 );

@@ -35,12 +35,13 @@ async def generate_character_description_with_langchain(prompt: str) -> Dict[str
     """
     try:
         base_system_prompt = """
-你是一个帮助跑团玩家创建角色描述的助手。请根据以下角色信息生成一个完整的人物描述，用于克苏鲁的呼唤跑团游戏。要求：
-1. 内容分为若干段落，包括角色的背景、性格、特质、技能等，并突出关键细节。
-2. 风格沉浸、有理有据，符合克苏鲁和爱手艺大师的风格，可以适当发挥创意，但不得过于脱离角色已有信息。
-3. 不要出现具体的属性分数，仅重点描述属性的几项特长和弱点，不要覆盖太多属性。
-4. 请严格返回下面的 JSON 格式，不要包含任何额外文本。
-"""
+        你是一个帮助跑团玩家创建角色描述的助手。请根据以下角色信息生成一个完整的人物描述，用于克苏鲁的呼唤跑团游戏。要求：
+        1. 内容分为若干段落，包括角色的背景、性格、特质、技能等，只突出关键细节。
+        2. 风格沉浸、有理有据，符合克苏鲁和爱手艺大师的风格，可以适当发挥创意，但不得过于脱离角色已有信息。
+        3. 不要出现具体的属性分数，仅重点描述属性的几项特长和弱点，不要覆盖太多属性。
+        4. 请基于 keylink 推断一段与其强相关的个人经历或情感纽带。
+        5. 请严格返回下面的 JSON 格式，不要包含任何额外文本。
+        """
         
         parser = PydanticOutputParser(pydantic_object=CharacterDescription)
 
@@ -71,7 +72,6 @@ async def generate_character_description_with_langchain(prompt: str) -> Dict[str
         print(f"Error in generate_character_description_with_langchain: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 关键改动: 使用 @background_router.post()
 @background_router.post("/generate_description")
 async def handle_generate_description(request: PromptRequest):
     print("Received prompt for character description:", request.prompt)

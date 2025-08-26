@@ -1,11 +1,11 @@
 redis下载：
-windows https://github.com/tporadowski/redis/releases
+windows https://github.com/redis-windows/redis-windows
 图形化客户端 https://github.com/lework/RedisDesktopManager-Windows/releases
 
 redis启动设置：
 默认port=6379就行
 命令行运行：
-E:\tools\Redis-x64-5.0.14.1>redis-server.exe redis.windows.conf
+redis-server.exe redis.conf
 
 redis连接端口配置：
 可以在`.env`文件中配置Redis连接参数
@@ -27,6 +27,7 @@ npm run dev
 后端启动：
 backend目录下
 uvicorn main:app --reload --port 8000
+
 
 
 

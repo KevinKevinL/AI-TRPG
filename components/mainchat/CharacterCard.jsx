@@ -1,5 +1,5 @@
 // components/mainchat/CharacterCard.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import DatabaseManager from '@components/coc/DatabaseManager';
 
@@ -8,31 +8,89 @@ export default function CharacterCard({ characterId }) {
   const [characterData, setCharacterData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const wsRef = useRef(null);
 
-  // 只需要调用一次 DatabaseManager 来获取方法
-  const { loadCharacterAttributes } = DatabaseManager();
+  // 只需要调用一次 DatabaseManager 来获取方法（此处不再使用 DB 加载）
+  DatabaseManager();
 
+  const loadCharacterData = async () => {
+    // 检查 characterId 是否存在，如果不存在则停止
+    if (!characterId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      console.log('加载角色数据:', characterId);
+      // 通过前端代理从后端 Redis 获取数据
+      const resp = await fetch(`/api/characterData?character_id=${characterId}`);
+      if (!resp.ok) throw new Error('获取 Redis 角色数据失败');
+      const data = await resp.json();
+
+      // 适配为本组件使用的数据结构
+      const adapted = {
+        attributes: data?.character_attributes || {},
+        derivedAttributes: {
+          hit_points: data?.character_hit_points,
+          magic_points: data?.character_magic_points,
+          sanity: data?.character_sanity,
+          move_rate: data?.character_derived_attributes?.move_rate ?? data?.character_derived_attributes?.moveRate,
+          damage_bonus: data?.character_derived_attributes?.damage_bonus ?? data?.character_derived_attributes?.damageBonus,
+          build: data?.character_derived_attributes?.build,
+        },
+        skills: data?.character_skills || {},
+        characterInfo: data?.character_info || {},
+      };
+      setCharacterData(adapted);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // WebSocket连接监听角色状态刷新
   useEffect(() => {
-    const loadCharacterData = async () => {
-      // 检查 characterId 是否存在，如果不存在则停止
-      if (!characterId) {
-        setLoading(false);
-        return;
-      }
+    // 创建WebSocket连接
+    const ws = new WebSocket('ws://localhost:8000/ws/dice');
+    wsRef.current = ws;
 
+    ws.onopen = () => {
+      console.log('角色卡片WebSocket连接已建立');
+    };
+
+    ws.onmessage = (event) => {
       try {
-        console.log('加载角色数据:', characterId);
-        // 使用传递进来的 characterId 来加载数据
-        const data = await loadCharacterAttributes(characterId);
-        setCharacterData(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        const data = JSON.parse(event.data);
+        if (data.type === 'character_state_refresh' && data.character_id === characterId) {
+          console.log('收到角色状态刷新通知，自动刷新角色卡片数据');
+          loadCharacterData(); // 自动刷新角色数据
+        }
+      } catch (error) {
+        console.error('解析WebSocket消息失败:', error);
       }
     };
 
+    ws.onerror = (error) => {
+      console.error('WebSocket错误:', error);
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket连接已关闭');
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+      }
+    };
+  }, [characterId]);
+
+  useEffect(() => {
     loadCharacterData();
+    
+    // 移除定时器，改为通过WebSocket实时刷新
+    // 当收到character_state_refresh消息时自动刷新
   }, [characterId]); // 依赖项为 characterId，当它变化时重新加载
 
   if (loading) {
@@ -90,11 +148,11 @@ export default function CharacterCard({ characterId }) {
         <div className="mb-2">
           <h3 className="text-base font-semibold text-emerald-900 mb-2">Derived Attributes</h3>
           <div className="grid grid-cols-3 gap-3 text-emerald-900">
-            <p>Hit Points: {derivedAttributes?.hitPoints || 0}</p>
-            <p>Magic Points: {derivedAttributes?.magicPoints || 0}</p>
+            <p>Hit Points: {derivedAttributes?.hit_points || 0}</p>
+            <p>Magic Points: {derivedAttributes?.magic_points || 0}</p>
             <p>Sanity: {derivedAttributes?.sanity || 0}</p>
-            <p>Move Rate: {derivedAttributes?.moveRate || 0}</p>
-            <p>Damage Bonus: {derivedAttributes?.damageBonus || 0}</p>
+            <p>Move Rate: {derivedAttributes?.move_rate || 0}</p>
+            <p>Damage Bonus: {derivedAttributes?.damage_bonus || 0}</p>
             <p>Build: {derivedAttributes?.build || 0}</p>
           </div>
         </div>
@@ -102,23 +160,23 @@ export default function CharacterCard({ characterId }) {
         <div className="mb-2">
           <h3 className="text-base font-semibold text-emerald-900 mb-2">Skills</h3>
           <div className="grid grid-cols-3 gap-3 text-emerald-900">
-            <p>Fighting: {skills?.Fighting || 0}</p>
-            <p>Firearms: {skills?.Firearms || 0}</p>
-            <p>Dodge: {skills?.Dodge || 0}</p>
-            <p>Mechanics: {skills?.Mechanics || 0}</p>
-            <p>Drive: {skills?.Drive || 0}</p>
-            <p>Stealth: {skills?.Stealth || 0}</p>
-            <p>Investigate: {skills?.Investigate || 0}</p>
-            <p>Hand Sleight: {skills?.Sleight_of_Hand || 0}</p>
-            <p>Electronics: {skills?.Electronics || 0}</p>
-            <p>History: {skills?.History || 0}</p>
-            <p>Science: {skills?.Science || 0}</p>
-            <p>Medicine: {skills?.Medicine || 0}</p>
-            <p>Occult: {skills?.Occult || 0}</p>
-            <p>Library Use: {skills?.Library_Use || 0}</p>
-            <p>Art: {skills?.Art || 0}</p>
-            <p>Persuade: {skills?.Persuade || 0}</p>
-            <p>Psychology: {skills?.Psychology || 0}</p>
+            <p>Fighting: {skills?.fighting || 0}</p>
+            <p>Firearms: {skills?.firearms || 0}</p>
+            <p>Dodge: {skills?.dodge || 0}</p>
+            <p>Mechanics: {skills?.mechanics || 0}</p>
+            <p>Drive: {skills?.drive || 0}</p>
+            <p>Stealth: {skills?.stealth || 0}</p>
+            <p>Investigate: {skills?.investigate || 0}</p>
+            <p>Sleight of Hand: {skills?.sleight_of_hand || 0}</p>
+            <p>Electronics: {skills?.electronics || 0}</p>
+            <p>History: {skills?.history || 0}</p>
+            <p>Science: {skills?.science || 0}</p>
+            <p>Medicine: {skills?.medicine || 0}</p>
+            <p>Occult: {skills?.occult || 0}</p>
+            <p>Library Use: {skills?.library_use || 0}</p>
+            <p>Art: {skills?.art || 0}</p>
+            <p>Persuade: {skills?.persuade || 0}</p>
+            <p>Psychology: {skills?.psychology || 0}</p>
           </div>
         </div>
       </div>

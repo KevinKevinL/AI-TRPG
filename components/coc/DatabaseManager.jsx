@@ -23,7 +23,7 @@ const DatabaseManager = () => {
         .join('');
       
       const createCharacterQuery = `
-        INSERT INTO Characters (id, name)
+        INSERT INTO characters (id, name)
         VALUES (?, "NewMan")
       `;
       
@@ -47,7 +47,7 @@ const DatabaseManager = () => {
     isInitializing = true;
 
     try {
-      const checkQuery = `SELECT COUNT(*) as count FROM Professions`;
+      const checkQuery = `SELECT COUNT(*) as count FROM professions`;
       const result = await executeQuery(checkQuery);
       
       if (result[0].count === 0) {
@@ -55,7 +55,7 @@ const DatabaseManager = () => {
         
         for (const [key, profession] of professionEntries) {
           const insertQuery = `
-            INSERT INTO Professions (title, description)
+            INSERT INTO professions (title, description)
             VALUES (?, ?)
           `;
           await executeQuery(insertQuery, [
@@ -77,7 +77,7 @@ const DatabaseManager = () => {
   const saveProfessionChoice = async (characterId, professionTitle) => {
     try {
       const findProfessionQuery = `
-        SELECT id, title FROM Professions 
+        SELECT id, title FROM professions 
         WHERE title = ?
         LIMIT 1
       `;
@@ -88,7 +88,7 @@ const DatabaseManager = () => {
       }
   
       const updateQuery = `
-        UPDATE Characters 
+        UPDATE characters 
         SET profession_id = ? 
         WHERE id = ?
       `;
@@ -176,21 +176,21 @@ const saveAttributes = async (characterId, attributes) => {
 const saveDerivedAttributes = async (characterId, derivedAttributes) => {
   try {
     // 步骤1: 检查是否存在
-    const existing = await executeQuery('SELECT 1 FROM DerivedAttributes WHERE character_id = ?', [characterId]);
+    const existing = await executeQuery('SELECT 1 FROM derived_attributes WHERE character_id = ?', [characterId]);
 
     if (existing.length > 0) {
       // 步骤2a: 如果存在，执行 UPDATE
       const updateSql = `
-        UPDATE DerivedAttributes
+        UPDATE derived_attributes
         SET
           sanity = ?,
-          magicPoints = ?,
-          interestPoints = ?,
-          hitPoints = ?,
-          moveRate = ?,
-          damageBonus = ?,
+          magic_points = ?,
+          interest_points = ?,
+          hit_points = ?,
+          move_rate = ?,
+          damage_bonus = ?,
           build = ?,
-          professionalPoints = ?
+          professional_points = ?
         WHERE character_id = ?
       `;
 
@@ -210,9 +210,9 @@ const saveDerivedAttributes = async (characterId, derivedAttributes) => {
     } else {
       // 步骤2b: 如果不存在，执行 INSERT
       const insertSql = `
-        INSERT INTO DerivedAttributes (
-          character_id, sanity, magicPoints, interestPoints,
-          hitPoints, moveRate, damageBonus, build, professionalPoints
+        INSERT INTO derived_attributes (
+          character_id, sanity, magic_points, interest_points,
+          hit_points, move_rate, damage_bonus, build, professional_points
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
@@ -242,30 +242,30 @@ const saveDerivedAttributes = async (characterId, derivedAttributes) => {
 const saveSkills = async (characterId, skills) => {
   try {
     // 步骤1: 检查是否存在
-    const existing = await executeQuery('SELECT 1 FROM Skills WHERE character_id = ?', [characterId]);
+    const existing = await executeQuery('SELECT 1 FROM skills WHERE character_id = ?', [characterId]);
 
     if (existing.length > 0) {
       // 步骤2a: 如果存在，执行 UPDATE
       const updateSql = `
-        UPDATE Skills
+        UPDATE skills
         SET
-          Fighting = ?,
-          Firearms = ?,
-          Dodge = ?,
-          Mechanics = ?,
-          Drive = ?,
-          Stealth = ?,
-          Investigate = ?,
-          Sleight_of_Hand = ?,
-          Electronics = ?,
-          History = ?,
-          Science = ?,
-          Medicine = ?,
-          Occult = ?,
-          Library_Use = ?,
-          Art = ?,
-          Persuade = ?,
-          Psychology = ?
+          fighting = ?,
+          firearms = ?,
+          dodge = ?,
+          mechanics = ?,
+          drive = ?,
+          stealth = ?,
+          investigate = ?,
+          sleight_of_hand = ?,
+          electronics = ?,
+          history = ?,
+          science = ?,
+          medicine = ?,
+          occult = ?,
+          library_use = ?,
+          art = ?,
+          persuade = ?,
+          psychology = ?
         WHERE character_id = ?
       `;
 
@@ -277,13 +277,13 @@ const saveSkills = async (characterId, skills) => {
         skills.drive || 0,
         skills.stealth || 0,
         skills.investigate || 0,
-        skills.sleightOfHand || 0,
+        skills.sleight_of_hand || 0,
         skills.electronics || 0,
         skills.history || 0,
         skills.science || 0,
         skills.medicine || 0,
         skills.occult || 0,
-        skills.libraryUse || 0,
+        skills.library_use || 0,
         skills.art || 0,
         skills.persuade || 0,
         skills.psychology || 0,
@@ -294,11 +294,11 @@ const saveSkills = async (characterId, skills) => {
     } else {
       // 步骤2b: 如果不存在，执行 INSERT
       const insertSql = `
-        INSERT INTO Skills (
-          character_id, Fighting, Firearms, Dodge, Mechanics,
-          Drive, Stealth, Investigate, Sleight_of_Hand,
-          Electronics, History, Science, Medicine, Occult,
-          Library_Use, Art, Persuade, Psychology
+        INSERT INTO skills (
+          character_id, fighting, firearms, dodge, mechanics,
+          drive, stealth, investigate, sleight_of_hand,
+          electronics, history, science, medicine, occult,
+          library_use, art, persuade, psychology
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
 
@@ -311,13 +311,13 @@ const saveSkills = async (characterId, skills) => {
         skills.drive || 0,
         skills.stealth || 0,
         skills.investigate || 0,
-        skills.sleightOfHand || 0,
+        skills.sleight_of_hand || 0,
         skills.electronics || 0,
         skills.history || 0,
         skills.science || 0,
         skills.medicine || 0,
         skills.occult || 0,
-        skills.libraryUse || 0,
+        skills.library_use || 0,
         skills.art || 0,
         skills.persuade || 0,
         skills.psychology || 0
@@ -327,7 +327,7 @@ const saveSkills = async (characterId, skills) => {
 
     // 接下来是更新信用评级，这部分逻辑是兼容的，不需要修改
     const updateCreditSql = `
-      UPDATE Attributes
+      UPDATE attributes
       SET credit_rating = ?
       WHERE character_id = ?
     `;
@@ -358,7 +358,7 @@ const saveSkills = async (characterId, skills) => {
           possessions, possessions_details, 
           traits, traits_details, 
           keylink, keylink_details 
-        FROM Backgrounds 
+        FROM backgrounds 
         WHERE character_id = ?
       `;
       const results = await executeQuery(query, [characterId]);
@@ -372,12 +372,12 @@ const saveSkills = async (characterId, skills) => {
 const saveBackground = async (characterId, background) => {
   try {
     // 步骤1: 检查是否存在
-    const existing = await executeQuery('SELECT 1 FROM Backgrounds WHERE character_id = ?', [characterId]);
+    const existing = await executeQuery('SELECT 1 FROM backgrounds WHERE character_id = ?', [characterId]);
 
     if (existing.length > 0) {
       // 步骤2a: 如果存在，执行 UPDATE
       const updateSql = `
-        UPDATE Backgrounds
+        UPDATE backgrounds
         SET
           beliefs = ?,
           beliefs_details = ?,
@@ -411,7 +411,7 @@ const saveBackground = async (characterId, background) => {
     } else {
       // 步骤2b: 如果不存在，执行 INSERT
       const insertSql = `
-        INSERT INTO Backgrounds (
+        INSERT INTO backgrounds (
           character_id,
           beliefs, beliefs_details,
           important_people, important_people_details,
@@ -448,7 +448,7 @@ const saveBackground = async (characterId, background) => {
  const saveDetailedDescription = async (characterId, name, gender, residence, birthplace, description, if_npc) => {
   try {
     const query = `
-      UPDATE Characters
+      UPDATE characters
       SET name = ?,gender = ?,residence = ?,birthplace = ?,description = ?,if_npc = ? WHERE id = ?
     `;
 
@@ -479,7 +479,7 @@ const getMapEvents = async (mapId) => {
   try {
     const query = `
       SELECT event_ids 
-      FROM Maps 
+      FROM maps 
       WHERE id = ?
     `;
     const results = await executeQuery(query, [mapId]);
@@ -506,7 +506,7 @@ const getEvents = async (eventIds) => {
 
     const query = `
       SELECT *
-      FROM Events 
+      FROM events 
       WHERE id IN (${eventIds.join(',')})
     `;
     const results = await executeQuery(query, []);
@@ -527,11 +527,11 @@ const updateEventStatus = async (eventId, happened = true) => {
   try {
     if (!eventId || eventId.length === 0) return;
 
-    const query = `
-      UPDATE Events 
-      SET if_happened = ?
-      WHERE id=?
-    `;
+      const query = `
+        UPDATE events 
+        SET if_happened = ?
+        WHERE id=?
+      `;
     await executeQuery(query, [happened ? 1 : 0,eventId]);
     
     return true;
@@ -546,11 +546,11 @@ const updateEventStatuses = async (eventId, happened = true) => {
   try {
     if (!eventId || eventId.length === 0) return;
 
-    const query = `
-      UPDATE Events 
-      SET if_happened = ?
-      WHERE id IN (${eventId.join(',')})
-    `;
+          const query = `
+        UPDATE events 
+        SET if_happened = ?
+        WHERE id IN (${eventId.join(',')})
+      `;
     await executeQuery(query, [happened ? 1 : 0]);
     
     return true;
@@ -628,13 +628,13 @@ const getAttributeByTestRequired = (testRequired) => {
     // 返回 derivedAttributes 表中对应的属性
     const derivedAttributes = [
       { test_id: 10, key: 'sanity', label: '理智值', englishLabel: 'SAN' },
-      { test_id: 11, key: 'magicPoints', label: '魔法值', englishLabel: 'MP' },
-      { test_id: 12, key: 'interestPoints', label: '兴趣点数', englishLabel: 'Interest' },
-      { test_id: 13, key: 'hitPoints', label: '生命值', englishLabel: 'HP' },
-      { test_id: 14, key: 'moveRate', label: '移动速度', englishLabel: 'MOV' },
-      { test_id: 15, key: 'damageBonus', label: '伤害加值', englishLabel: 'DB' },
+      { test_id: 11, key: 'magic_points', label: '魔法值', englishLabel: 'MP' },
+      { test_id: 12, key: 'interest_points', label: '兴趣点数', englishLabel: 'Interest' },
+      { test_id: 13, key: 'hit_points', label: '生命值', englishLabel: 'HP' },
+      { test_id: 14, key: 'move_rate', label: '移动速度', englishLabel: 'MOV' },
+      { test_id: 15, key: 'damage_bonus', label: '伤害加值', englishLabel: 'DB' },
       { test_id: 16, key: 'build', label: '体格', englishLabel: 'Build' },
-      { test_id: 17, key: 'professionalPoints', label: '职业技能点', englishLabel: 'Profession Points' }
+      { test_id: 17, key: 'professional_points', label: '职业技能点', englishLabel: 'Profession Points' }
     ];
 
     return derivedAttributes[testRequired - 10]; // 返回对应的派生属性对象
@@ -648,13 +648,13 @@ const getAttributeByTestRequired = (testRequired) => {
       { test_id: 22, key: 'drive', label: '驾驶', englishLabel: 'Drive' },
       { test_id: 23, key: 'stealth', label: '潜行', englishLabel: 'Stealth' },
       { test_id: 24, key: 'investigate', label: '侦查', englishLabel: 'Investigate' },
-      { test_id: 25, key: 'sleightOfHand', label: '巧手', englishLabel: 'Sleight of Hand' },
+      { test_id: 25, key: 'sleight_of_hand', label: '巧手', englishLabel: 'Sleight of Hand' },
       { test_id: 26, key: 'electronics', label: '电子', englishLabel: 'Electronics' },
       { test_id: 27, key: 'history', label: '历史', englishLabel: 'History' },
       { test_id: 28, key: 'science', label: '科学', englishLabel: 'Science' },
       { test_id: 29, key: 'medicine', label: '医学', englishLabel: 'Medicine' },
       { test_id: 30, key: 'occult', label: '神秘学', englishLabel: 'Occult' },
-      { test_id: 31, key: 'library', label: '图书馆使用', englishLabel: 'Library Use' },
+      { test_id: 31, key: 'library_use', label: '图书馆使用', englishLabel: 'Library Use' },
       { test_id: 32, key: 'art', label: '艺术', englishLabel: 'Art' },
       { test_id: 33, key: 'persuade', label: '交际', englishLabel: 'Persuade' },
       { test_id: 34, key: 'psychology', label: '心理学', englishLabel: 'Psychology' }
@@ -667,11 +667,11 @@ const getAttributeByTestRequired = (testRequired) => {
 // 根据 testRequired 返回对应的表
 const getTableForTestRequired = (testRequired) => {
   if (testRequired >= 1 && testRequired <= 9) {
-    return 'Attributes'; // 对应属性表
+    return 'attributes'; // 对应属性表
   } else if (testRequired >= 10 && testRequired <= 17) {
-    return 'DerivedAttributes'; // 对应派生属性表
+    return 'derived_attributes'; // 对应派生属性表
   } else {
-    return 'Skills'; // 对应技能表
+    return 'skills'; // 对应技能表
   }
 };
 
@@ -681,12 +681,12 @@ const getCharacterAttributeValue = async (testRequired, testCharacterId) => {
   const table = getTableForTestRequired(testRequired);  // 获取相应的表（属性、派生属性、技能）
 
   let query = '';
-  if (table === 'Attributes') {
-    query = `SELECT ${attribute.key} FROM Attributes WHERE character_id = ?`;
-  } else if (table === 'DerivedAttributes') {
-    query = `SELECT ${attribute.key} FROM DerivedAttributes WHERE character_id = ?`;
-  } else if (table === 'Skills') {
-    query = `SELECT ${attribute.key} FROM Skills WHERE character_id = ?`;
+  if (table === 'attributes') {
+    query = `SELECT ${attribute.key} FROM attributes WHERE character_id = ?`;
+  } else if (table === 'derived_attributes') {
+    query = `SELECT ${attribute.key} FROM derived_attributes WHERE character_id = ?`;
+  } else if (table === 'skills') {
+    query = `SELECT ${attribute.key} FROM skills WHERE character_id = ?`;
   }
 
   try {
@@ -709,21 +709,21 @@ const loadCharacterAttributes = async (characterId) => {
   try {
     // 获取基础属性
     const attributesQuery = `
-      SELECT * FROM Attributes 
+      SELECT * FROM attributes 
       WHERE character_id = ?
     `;
     const attributes = await executeQuery(attributesQuery, [characterId]);
 
     // 获取派生属性
     const derivedAttributesQuery = `
-      SELECT * FROM DerivedAttributes 
+      SELECT * FROM derived_attributes 
       WHERE character_id = ?
     `;
     const derivedAttributes = await executeQuery(derivedAttributesQuery, [characterId]);
 
     // 获取技能
     const skillsQuery = `
-      SELECT * FROM Skills 
+      SELECT * FROM skills 
       WHERE character_id = ?
     `;
     const skills = await executeQuery(skillsQuery, [characterId]);
@@ -731,7 +731,7 @@ const loadCharacterAttributes = async (characterId) => {
     // 获取角色基本信息
     const characterQuery = `
       SELECT name, gender, residence, birthplace, description 
-      FROM Characters 
+      FROM characters 
       WHERE id = ?
     `;
     const characterInfo = await executeQuery(characterQuery, [characterId]);
@@ -752,21 +752,21 @@ const loadCharacterAllInfo = async (characterId) => {
   try {
     // 获取基础属性
     const attributesQuery = `
-      SELECT * FROM Attributes 
+      SELECT * FROM attributes 
       WHERE character_id = ?
     `;
     const attributes = await executeQuery(attributesQuery, [characterId]);
 
     // 获取派生属性
     const derivedAttributesQuery = `
-      SELECT * FROM DerivedAttributes 
+      SELECT * FROM derived_attributes 
       WHERE character_id = ?
     `;
     const derivedAttributes = await executeQuery(derivedAttributesQuery, [characterId]);
 
     // 获取技能
     const skillsQuery = `
-      SELECT * FROM Skills 
+      SELECT * FROM skills 
       WHERE character_id = ?
     `;
     const skills = await executeQuery(skillsQuery, [characterId]);
@@ -774,7 +774,7 @@ const loadCharacterAllInfo = async (characterId) => {
     // 获取角色基本信息
     const characterQuery = `
       SELECT name, gender, residence, birthplace, description 
-      FROM Characters 
+      FROM characters 
       WHERE id = ?
     `;
     const characterInfo = await executeQuery(characterQuery, [characterId]);
