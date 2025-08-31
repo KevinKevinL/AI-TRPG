@@ -58,6 +58,15 @@ async def parse_player_action(player_input: str, available_npcs: list = [], avai
 
     npc_list_str = ", ".join([f"'{n.get('name', '未知NPC')}' (id: {n.get('id', 'unknown')})" for n in available_npcs])
     object_list_str = ", ".join([f"'{o.get('object_name', '未知物品')}' (id: {o.get('object_id', 'unknown')})" for o in available_objects])
+    
+    # 获取地图信息用于移动意图解析
+    from map_movement import map_movement_manager
+    maps_info = []
+    for map_id in range(1, 4):  # 假设有3个地图
+        map_info = map_movement_manager.get_map_info(map_id)
+        if map_info:
+            maps_info.append(f"'{map_info['map_name']}' (ID: {map_id})")
+    maps_list_str = ", ".join(maps_info)
 
     system_prompt = f"""
     你是一个COC跑团的指令解析器。根据玩家输入，分析其核心意图，并生成结构化的JSON响应。
@@ -76,7 +85,7 @@ async def parse_player_action(player_input: str, available_npcs: list = [], avai
     # 2. 可用目标 (target) 列表:
     - NPC: [{npc_list_str}]
     - 物品: [{object_list_str}]
-    - 地点: 回阿卡姆的路(地图3), 加油站咖啡馆(地图2), 离开阿卡姆的郊外公路(地图1)
+    - 地图: [{maps_list_str}]
 
     # 3. 可用技能列表：
     - 核心属性: strength(力量), constitution(体质), size(体型), dexterity(敏捷), appearance(外貌), intelligence(智力), power(意志), education(教育), luck(幸运)

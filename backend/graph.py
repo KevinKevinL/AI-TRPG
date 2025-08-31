@@ -15,6 +15,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from databaseManager import db_manager
 from character_state import get_current_character_id
 from memory_manager import memory_manager
+from map_movement import map_movement_manager
 from redis_manager import (
     get_world_state, save_world_state,
     get_map_state, save_map_state,
@@ -22,7 +23,7 @@ from redis_manager import (
     get_character_sheet,
     get_conversation_history, save_conversation_history,
     get_completed_event_ids, save_completed_event_ids,
-    apply_state_changes
+    apply_state_changes, apply_map_state_changes
 )
 import player_action_parser
 from player_action_parser import get_skill_value_from_sheet # 导入新工具函数
@@ -113,6 +114,7 @@ async def orchestrator_agent(state: AgentState):
     )
     print(f"[Orchestrator] 解析到的玩家意图: {state['player_action']}")
 
+    # 先检查当前地图的事件触发条件
     if not state['session_state'].get('pending_check_event_id'):
         current_map_id = state['session_state'].get('current_map_id', 1)
         all_events = db_manager.execute_query("SELECT * FROM events WHERE map_id = ?", (current_map_id,))
@@ -162,8 +164,47 @@ async def orchestrator_agent(state: AgentState):
             print(f"[Orchestrator] 地图 {current_map_id} 上没有事件")
     else:
         print(f"[Orchestrator] 发现挂起检定 pending_check_event_id={state['session_state'].get('pending_check_event_id')}")
+
+    # 如果没有事件触发，才处理移动意图
+    if not state.get('triggered_event') and state['player_action'].get('intent') == 'move' and state['player_action'].get('target_location_id'):
+        target_map_id = state['player_action']['target_location_id']
+        print(f"[Orchestrator] 检测到移动意图，目标地图: {target_map_id}")
+        
+        # 执行移动
+        if map_movement_manager.move_character_to_map(state['character_id'], target_map_id):
+            # 移动成功，更新地图状态
+            new_map_id = target_map_id
+            state['session_state']['current_map_id'] = new_map_id
+            state['map_state'] = get_map_state(new_map_id)
+            
+            # 重新加载新地图的NPC和对象
+            npc_ids = state['map_state'].get('npcs', [])
+            state['active_npcs'] = [get_character_sheet(npc_id).get('info', {}) for npc_id in npc_ids if get_character_sheet(npc_id)]
+            
+            objects_state = state['map_state'].get('objects', {})
+            state['interactable_objects'] = []
+            for obj_id, obj_state in objects_state.items():
+                obj_info = db_manager.execute_query("SELECT object_name FROM interactable_objects WHERE object_id = ?", (obj_id,))
+                obj_name = obj_info[0]['object_name'] if obj_info else f"物品{obj_id}"
+                state['interactable_objects'].append({"object_id": obj_id, "object_name": obj_name})
+            
+            print(f"[Orchestrator] 移动完成，新地图: {new_map_id}")
+            print(f"[Orchestrator] 新地图NPC: {[n.get('id') for n in state['active_npcs']]}")
+            print(f"[Orchestrator] 新地图对象: {state['interactable_objects']}")
+        else:
+            print(f"[Orchestrator] 移动到地图 {target_map_id} 失败")
+
     
-    state['turn_context_summary'] = f"玩家的行动是：'{state['player_input']}'。\n"
+    # 如果是移动意图，添加移动描述
+    if state['player_action'].get('intent') == 'move' and state['player_action'].get('target_location_id'):
+        movement_desc = map_movement_manager.get_movement_description(
+            state['character_id'], 
+            state['player_action']['target_location_id']
+        )
+        state['turn_context_summary'] = f"玩家的行动是：'{state['player_input']}'。\n{movement_desc}\n"
+    else:
+        state['turn_context_summary'] = f"玩家的行动是：'{state['player_input']}'。\n"
+    
     return state
 
 async def resolve_check_agent(state: AgentState):
@@ -381,6 +422,14 @@ async def narrative_synthesizer_agent(state: AgentState):
         if 'world_state_change' in outcome_data:
             print(f"[Narrative] 应用世界状态更改: {outcome_data['world_state_change']}")
             state['world_state'].update(outcome_data['world_state_change'])
+        if 'map_state_change' in outcome_data:
+            print(f"[Narrative] 应用地图状态更改: {outcome_data['map_state_change']}")
+            # map_state_change 是一个字典，需要包装成列表
+            apply_map_state_changes([outcome_data['map_state_change']])
+            # 同步更新state中的map_state，确保最终保存的是最新数据
+            current_map_id = state['session_state'].get('current_map_id', 1)
+            state['map_state'] = get_map_state(current_map_id)
+            print(f"[Narrative] 已同步更新state中的map_state: {state['map_state']}")
         if 'object_state_change' in outcome_data:
             print(f"[Narrative] 应用物品状态更改: {outcome_data['object_state_change']}")
             for change in outcome_data['object_state_change']:

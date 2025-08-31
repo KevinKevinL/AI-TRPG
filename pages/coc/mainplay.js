@@ -4,7 +4,7 @@ import DialogueBox from '@components/mainchat/DialogueBox';
 import CharacterCard from '@components/mainchat/CharacterCard';
 import CharacterStatus from '@components/mainchat/CharacterStatus';
 import DicePanel from '@components/mainchat/DicePanel';
-import Panel from '@components/mainchat/Panel';
+import MapPanel from '@components/mainchat/MapPanel';
 import Image from 'next/image';
 import RainEffect from '@components/mainchat/RainEffect';
 import { Menu, X } from 'lucide-react';
@@ -139,7 +139,7 @@ export default function MainPlay() {
             />
           </div>
           <div className="bg-emerald-0 rounded-lg">
-            <Panel title="快捷操作" />
+            <MapPanel characterId={currentCharacterId} />
           </div>
           {/* Add flex-grow to push the character status to the bottom */}
           <div className="flex-grow"></div>

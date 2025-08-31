@@ -72,10 +72,81 @@ def save_map_state(map_id: int, map_data: Dict[str, Any]):
 
 def get_map_state(map_id: int) -> Dict[str, Any]:
     redis_client = get_redis_client()
-    if not redis_client: return {"npcs": [], "objects": {}}
+    if not redis_client: return {"npcs": [], "objects": {}, "accessible_maps": []}
     key = f"{MAP_STATE_KEY_PREFIX}{map_id}"
     data = redis_client.get(key)
-    return json.loads(data) if data else {"npcs": [], "objects": {}}
+    return json.loads(data) if data else {"npcs": [], "objects": {}, "accessible_maps": []}
+
+# --- 2.1. 地图可访问性管理 (集成到map_state中) ---
+def get_map_accessibility(map_id: int) -> List[int]:
+    """从map_state中获取地图的可访问性信息"""
+    map_state = get_map_state(map_id)
+    accessible_maps = map_state.get("accessible_maps", [])
+    
+    # 如果Redis中没有数据，尝试从数据库重新初始化
+    if not accessible_maps:
+        print(f"地图{map_id}的Redis中没有可访问性数据，尝试重新初始化...")
+        initialize_map_accessibility_from_db(map_id)
+        # 重新获取
+        map_state = get_map_state(map_id)
+        accessible_maps = map_state.get("accessible_maps", [])
+    
+    return accessible_maps
+
+def update_map_accessibility(map_id: int, target_map_id: int, is_accessible: bool):
+    """更新特定地图的可访问性"""
+    redis_client = get_redis_client()
+    if not redis_client: return
+    
+    # 获取当前地图状态
+    map_state = get_map_state(map_id)
+    current_accessible = map_state.get("accessible_maps", [])
+    
+    if is_accessible and target_map_id not in current_accessible:
+        current_accessible.append(target_map_id)
+    elif not is_accessible and target_map_id in current_accessible:
+        current_accessible.remove(target_map_id)
+    
+    # 更新map_state中的可访问性
+    map_state["accessible_maps"] = current_accessible
+    save_map_state(map_id, map_state)
+    
+    print(f"地图{map_id}到地图{target_map_id}的可访问性已更新为: {is_accessible}")
+
+def initialize_map_accessibility_from_db(map_id: int = None):
+    """从数据库初始化指定地图的可访问性到map_state，如果不指定则初始化所有地图"""
+    try:
+        from databaseManager import db_manager
+        
+        if map_id is not None:
+            # 只初始化指定地图
+            maps_data = db_manager.execute_query("SELECT id, accessible_locations FROM maps WHERE id = ?", (map_id,))
+        else:
+            # 初始化所有地图
+            maps_data = db_manager.execute_query("SELECT id, accessible_locations FROM maps ORDER BY id")
+        
+        for map_data in maps_data:
+            current_map_id = map_data['id']
+            accessible_locations = map_data.get('accessible_locations')
+            
+            if accessible_locations:
+                try:
+                    accessible_list = json.loads(accessible_locations)
+                    # 获取现有map_state或创建新的
+                    map_state = get_map_state(current_map_id)
+                    map_state["accessible_maps"] = accessible_list
+                    save_map_state(current_map_id, map_state)
+                    print(f"地图{current_map_id}的可访问性已初始化到map_state: {accessible_list}")
+                except json.JSONDecodeError:
+                    print(f"地图{current_map_id}的可访问性数据格式错误: {accessible_locations}")
+            else:
+                map_state = get_map_state(current_map_id)
+                map_state["accessible_maps"] = []
+                save_map_state(current_map_id, map_state)
+                print(f"地图{current_map_id}的可访问性已初始化为空列表")
+                
+    except Exception as e:
+        print(f"初始化地图可访问性失败: {e}")
 
 # --- 3. 角色静态数据 (Character Sheet) ---
 def save_character_sheet(character_id: str, sheet_data: Dict[str, Any]):
@@ -200,3 +271,27 @@ def apply_state_changes(player_character_id: str, state_changes: List[Dict[str, 
                     print(f"角色 {target_id} 的状态 {key} 已设置为 {value}")
         
         save_session_state(target_id, session)
+
+def apply_map_state_changes(map_state_changes: List[Dict[str, Any]]):
+    """应用地图状态变更（包括地图可访问性）"""
+    if not map_state_changes: return
+    
+    for change in map_state_changes:
+        if "modify_location_accessible" in change:
+            # 处理地图可访问性变更
+            modification = change["modify_location_accessible"]
+            if isinstance(modification, list):
+                for mod in modification:
+                    if isinstance(mod, dict) and "from_map" in mod and "to_map" in mod and "action" in mod:
+                        from_map = mod["from_map"]
+                        to_map = mod["to_map"]
+                        action = mod["action"]  # "add" 或 "remove"
+                        
+                        is_accessible = (action == "add")
+                        update_map_accessibility(from_map, to_map, is_accessible)
+                        print(f"事件影响：地图{from_map}到地图{to_map}的可访问性已{'增加' if is_accessible else '移除'}")
+            else:
+                print(f"modify_location_accessible 格式错误，应为列表: {modification}")
+        
+        # 可以添加更多地图状态变更的处理逻辑
+        print(f"应用地图状态变更: {change}")

@@ -54,9 +54,18 @@ async def handle_character_entered(request: CharacterIdRequest):
         objects_on_map = db_manager.get_objects_on_map(current_map_id)
         print(f"地图 {current_map_id} 查询结果：NPC数量={len(npcs_on_map)}, 物品数量={len(objects_on_map)}")
         
+        # 获取地图的可访问性信息
+        from redis_manager import initialize_map_accessibility_from_db, get_map_state
+        initialize_map_accessibility_from_db(current_map_id)
+        
+        # 获取已初始化的可访问性信息
+        existing_map_state = get_map_state(current_map_id)
+        accessible_maps = existing_map_state.get("accessible_maps", [])
+        
         map_state = {
             "npcs": [npc['id'] for npc in npcs_on_map],
-            "objects": {str(obj['object_id']): obj['current_state'] for obj in objects_on_map}
+            "objects": {str(obj['object_id']): obj['current_state'] for obj in objects_on_map},
+            "accessible_maps": accessible_maps
         }
         
         # 4. 将所有数据分别存入Redis
@@ -131,8 +140,8 @@ async def api_get_character_data(character_id: str):
             derived_attrs = character_sheet.get('derived_attributes', {})
             session_state = {
                 "hp": derived_attrs.get("hit_points", 0),
-                "sanity": derived_attrs.get("sanity", 0),
                 "mp": derived_attrs.get("magic_points", 0),
+                "sanity": derived_attrs.get("sanity", 0),
                 "current_map_id": character_sheet.get('info', {}).get('current_location_id', 1),
                 "current_vehicle_id": character_sheet.get('info', {}).get('current_vehicle_id', None),
             }
@@ -162,3 +171,24 @@ async def api_get_character_data(character_id: str):
         import traceback
         print(f"获取角色数据时出错: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"获取角色数据时出错: {e}")
+
+@character_router.get("/map_state/{map_id}")
+async def api_get_map_state(map_id: int):
+    """
+    获取指定地图的状态信息，包括NPC、物品和可访问性
+    """
+    try:
+        from redis_manager import get_map_state
+        
+        map_state = get_map_state(map_id)
+        if not map_state:
+            raise HTTPException(status_code=404, detail="地图不存在")
+        
+        return map_state
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"获取地图状态时出错: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"获取地图状态时出错: {e}")

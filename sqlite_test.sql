@@ -354,7 +354,7 @@ INSERT INTO "events" ("event_id", "event_info", "map_id", "if_unique", "pre_even
 '{"player_action": {"intent": "move", "target_location_id": 3}}',
 '{
   "narrative_injection": "当调查员试图掉头返回阿卡姆时，一道耀眼的闪电撕裂夜空，猛地劈在路边的一棵大树上！大树轰然倒下，沉重地横亙在路上，彻底断绝了调查员的退路。",
-  "world_state_change": {"location_3_accessible": "false"},
+  "map_state_change": {"modify_location_accessible": [{"from_map": 1, "to_map": 3, "action": "remove"}]},
   "trigger_event": 12
 }'),
 -- Event 12: 艾米利亚对倒下的大树的反应
