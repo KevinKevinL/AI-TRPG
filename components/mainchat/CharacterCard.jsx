@@ -1,7 +1,7 @@
 // components/mainchat/CharacterCard.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
-import DatabaseManager from '@components/coc/DatabaseManager';
+// import DatabaseManager from '@components/coc/DatabaseManager';
 
 // 接受 characterId prop
 export default function CharacterCard({ characterId }) {
@@ -10,8 +10,8 @@ export default function CharacterCard({ characterId }) {
   const [error, setError] = useState(null);
   const wsRef = useRef(null);
 
-  // 只需要调用一次 DatabaseManager 来获取方法（此处不再使用 DB 加载）
-  DatabaseManager();
+  // 只需要调用一次 DatabaseManager 来获取方法（此处不再使用 DB 加载）- 修复：只在组件初始化时调用一次
+  // const databaseManager = DatabaseManager();
 
   const loadCharacterData = async () => {
     // 检查 characterId 是否存在，如果不存在则停止
@@ -29,17 +29,17 @@ export default function CharacterCard({ characterId }) {
 
       // 适配为本组件使用的数据结构
       const adapted = {
-        attributes: data?.character_attributes || {},
+        attributes: data?.attributes || {},
         derivedAttributes: {
-          hit_points: data?.character_hit_points,
-          magic_points: data?.character_magic_points,
-          sanity: data?.character_sanity,
-          move_rate: data?.character_derived_attributes?.move_rate ?? data?.character_derived_attributes?.moveRate,
-          damage_bonus: data?.character_derived_attributes?.damage_bonus ?? data?.character_derived_attributes?.damageBonus,
-          build: data?.character_derived_attributes?.build,
+          hit_points: data?.status?.hit_points || data?.derived_attributes?.hit_points,
+          magic_points: data?.status?.magic_points || data?.derived_attributes?.magic_points,
+          sanity: data?.status?.sanity || data?.derived_attributes?.sanity,
+          move_rate: data?.derived_attributes?.move_rate,
+          damage_bonus: data?.derived_attributes?.damage_bonus,
+          build: data?.derived_attributes?.build,
         },
-        skills: data?.character_skills || {},
-        characterInfo: data?.character_info || {},
+        skills: data?.skills || {},
+        characterInfo: data?.info || {},
       };
       setCharacterData(adapted);
     } catch (err) {

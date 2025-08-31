@@ -1,15 +1,16 @@
 // components/mainchat/CharacterStatus.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
-import DatabaseManager from '@components/coc/DatabaseManager';
+// import DatabaseManager from '@components/coc/DatabaseManager';
 
 export default function CharacterStatus({ characterId }) {
   const [characterData, setCharacterData] = useState(null);
   const [loading, setLoading] = useState(true);
   const wsRef = useRef(null);
 
-  // 从 DatabaseManager 钩子中获取加载数据的方法
-  const { loadCharacterAttributes } = DatabaseManager();
+  // 从 DatabaseManager 钩子中获取加载数据的方法 - 修复：只在组件初始化时调用一次
+  // const databaseManager = DatabaseManager();
+  // const { loadCharacterAttributes } = databaseManager;
 
   const loadCharacterData = async () => {
     // 检查 characterId 是否有效，如果无效则停止加载
@@ -27,12 +28,12 @@ export default function CharacterStatus({ characterId }) {
         // 适配为原本使用的数据结构字段名
         const adapted = {
           derivedAttributes: {
-            hit_points: data.character_hit_points,
-            magic_points: data.character_magic_points,
-            sanity: data.character_sanity,
+            hit_points: data?.status?.hit_points || data?.derived_attributes?.hit_points,
+            magic_points: data?.status?.magic_points || data?.derived_attributes?.magic_points,
+            sanity: data?.status?.sanity || data?.derived_attributes?.sanity,
           },
           characterInfo: {
-            name: data?.character_info?.name || '未知',
+            name: data?.info?.name || '未知',
           }
         };
         setCharacterData(adapted);

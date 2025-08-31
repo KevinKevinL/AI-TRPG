@@ -28,6 +28,9 @@ npm run dev
 backend目录下
 uvicorn main:app --reload --port 8000
 
+记忆管理：
+backend目录下
+python chroma_interactive.py
 
 
 

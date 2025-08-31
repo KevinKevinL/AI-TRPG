@@ -11,8 +11,13 @@ import { Menu, X } from 'lucide-react';
 import DatabaseManager from '@components/coc/DatabaseManager';
 
 export default function MainPlay() {
-  // 从 DatabaseManager 获取当前角色ID
-  const { currentCharacterId } = DatabaseManager();
+  // 硬编码使用指定的角色ID进行测试
+  const currentCharacterId = "bf4cacb2cfe76cacf804fc87bb7913e32e4fc05ace2a7a906c0fb621853bffff";
+  
+  // 从 DatabaseManager 获取当前角色ID - 修复：只在组件初始化时调用一次
+  // const databaseManager = DatabaseManager();
+  // const { currentCharacterId } = databaseManager;
+  
   const [messages, setMessages] = useState([
     { sender: 'KP', text: '夜幕如同黑色的裹尸布，将世界包裹得严严实实。你从阿卡姆启程，正驱车前往外地处理一桩棘手的委托。然而，一场突如其来的风暴彻底打乱了你的计划。豆大的雨点疯狂地砸向车顶，闪电撕裂漆黑的夜空，照亮了车窗上扭曲的雨痕。你的车只能像一只爬行的甲虫，在泥泞的道路上缓慢挪动，努力用前灯的光穿透雨幕，避免迷失方向......' },
   ]);

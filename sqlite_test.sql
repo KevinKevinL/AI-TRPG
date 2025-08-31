@@ -1,11 +1,103 @@
 /*
-  这是一个为 SQLite 数据库修改的脚本
-  它移除了所有不兼容的 MySQL 语法。
+ ==========================================================
+    AI跑团系统 - 创世最终脚本 (结构修改版)
+ ==========================================================
 */
 
--- ----------------------------
--- Table structure for attributes
--- ----------------------------
+-- 开启外键约束功能 (推荐)
+PRAGMA foreign_keys=ON;
+
+/* ---------------------------------
+ Section 1: 创建核心表结构
+---------------------------------
+*/
+
+-- Table: world_state (全局世界状态)
+DROP TABLE IF EXISTS "world_state";
+CREATE TABLE "world_state" (
+  "state_key" TEXT PRIMARY KEY NOT NULL,
+  "state_value" TEXT NULL,
+  "last_updated" DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Table: maps (地图信息)
+DROP TABLE IF EXISTS "maps";
+CREATE TABLE "maps" (
+  "id" INTEGER PRIMARY KEY,
+  "map_name" TEXT NULL,
+  "map_info" TEXT NULL,
+  "accessible_locations" TEXT NULL -- JSON array of map IDs
+);
+
+-- Table: interactable_objects (场景实体/可交互物)
+DROP TABLE IF EXISTS "interactable_objects";
+CREATE TABLE "interactable_objects" (
+  "object_id" INTEGER PRIMARY KEY,
+  "map_id" INTEGER,
+  "object_name" TEXT NULL,
+  "description_initial" TEXT NULL,
+  "is_interactive" INTEGER DEFAULT 1,
+  "current_state" TEXT NULL, -- JSON
+  FOREIGN KEY ("map_id") REFERENCES "maps" ("id")
+);
+
+-- Table: events (事件)
+DROP TABLE IF EXISTS "events";
+CREATE TABLE "events" (
+  "event_id" INTEGER PRIMARY KEY,
+  "event_info" TEXT NULL,
+  "map_id" INTEGER NULL,
+  "if_unique" INTEGER NULL,
+  "pre_event_ids" TEXT NULL,  -- JSON array
+  "preconditions" TEXT NULL,   -- JSON
+  "effects" TEXT NULL          -- JSON
+);
+
+-- Table: npc_memories (NPC记忆)
+DROP TABLE IF EXISTS "npc_memories";
+CREATE TABLE "npc_memories" (
+  "memory_id" INTEGER PRIMARY KEY AUTOINCREMENT,
+  "character_id" TEXT NOT NULL,
+  "timestamp" DATETIME DEFAULT CURRENT_TIMESTAMP,
+  "memory_text" TEXT NOT NULL,
+  "type" TEXT NOT NULL,  -- 'observation', 'conversation', 'reflection'
+  "importance" INTEGER DEFAULT 5,
+  FOREIGN KEY ("character_id") REFERENCES "characters" ("id") ON DELETE CASCADE
+);
+
+-- Table: professions (职业)
+DROP TABLE IF EXISTS "professions";
+CREATE TABLE "professions" (
+  "id" INTEGER PRIMARY KEY,
+  "title" TEXT NULL,
+  "description" TEXT NULL
+);
+
+-- Table: characters (角色信息总表)
+DROP TABLE IF EXISTS "characters";
+CREATE TABLE "characters" (
+  "id" TEXT PRIMARY KEY NOT NULL,
+  "name" TEXT NULL,
+  "if_npc" INTEGER NULL,
+  "gender" TEXT NULL,
+  "residence" TEXT NULL,
+  "birthplace" TEXT NULL,
+  "profession_id" INTEGER NULL,
+  "description" TEXT NULL,
+  "current_location_id" INTEGER NULL,
+  "current_vehicle_id" INTEGER NULL,
+  "current_goal" TEXT NULL,
+  "status" TEXT NULL,
+  "relationships" TEXT NULL, -- JSON
+  FOREIGN KEY ("profession_id") REFERENCES "professions" ("id") ON DELETE SET NULL,
+  FOREIGN KEY ("current_location_id") REFERENCES "maps" ("id") ON DELETE SET NULL
+);
+
+-- ==========================================================
+-- Section 1.1: 新增的角色数据表 (根据旧数据库结构)
+-- ==========================================================
+
+-- Table: attributes (核心属性)
 DROP TABLE IF EXISTS "attributes";
 CREATE TABLE "attributes" (
   "character_id" char(64) NULL,
@@ -22,107 +114,7 @@ CREATE TABLE "attributes" (
   UNIQUE ("character_id")
 );
 
--- ----------------------------
--- Records of attributes
--- ----------------------------
-INSERT INTO "attributes" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', 40, 50, 45, 70, 60, 80, 50, 85, 50, 70);
-INSERT INTO "attributes" VALUES ('99', 40, 70, 70, 70, 50, 75, 40, 55, 55, NULL);
-INSERT INTO "attributes" VALUES ('563', 65, 65, 55, 25, 55, 70, 40, 65, 70, NULL);
-INSERT INTO "attributes" VALUES ('2ce488b418224f9354ce70d4d77c9a8360fa142018ab9a8c68d82ba7dc999b7e', 70, 50, 50, 35, 75, 50, 75, 52, 80, 35);
-INSERT INTO "attributes" VALUES ('250de97665cf801aabcc2f17fd497004c6066d1ddbf451c65af4e507d0584cff', 30, 55, 55, 60, 30, 90, 45, 85, 60, 50);
-INSERT INTO "attributes" VALUES ('7ba3a38b9c4823d46ba1063a735bedd2bd08394325d63d1e71061a17eb6706d5', 50, 55, 70, 55, 45, 50, 60, 80, 60, NULL);
-INSERT INTO "attributes" VALUES ('92de5b9900c85db83b1f662616efbc19a95728d122b06624825cb51e5d8c8a0e', 40, 60, 65, 50, 65, 75, 60, 62, 45, 70);
-INSERT INTO "attributes" VALUES ('e11ad2911da9f6d3d73dbc6129318d3a8d6184ccb7ad63693e35ca441652b10c', 50, 45, 70, 65, 70, 60, 55, 90, 65, 60);
-INSERT INTO "attributes" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb8726024325b6b0de46e2808905d', 85, 60, 55, 40, 50, 65, 65, 66, 65, 60);
-
--- ----------------------------
--- Table structure for backgrounds
--- ----------------------------
-DROP TABLE IF EXISTS "backgrounds";
-CREATE TABLE "backgrounds" (
-  "character_id" char(64) NULL,
-  "beliefs" text NULL,
-  "beliefs_details" text NULL,
-  "important_people" text NULL,
-  "important_people_details" text NULL,
-  "reasons" text NULL,
-  "reasons_details" text NULL,
-  "places" text NULL,
-  "places_details" text NULL,
-  "possessions" text NULL,
-  "possessions_details" text NULL,
-  "traits" text NULL,
-  "traits_details" text NULL,
-  "keylink" text NULL,
-  "keylink_details" text NULL,
-  UNIQUE ("character_id"),
-  CONSTRAINT "Backgrounds_ibfk_1" FOREIGN KEY ("character_id") REFERENCES "characters" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
-);
-
--- ----------------------------
--- Records of backgrounds
--- ----------------------------
-INSERT INTO "backgrounds" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', '科学万能！（例如，进化论，低温学，太空探索）', '科学揭示世界的真相', '祖辈（例如，祖母，祖父）', '她爷爷韦伯医生', '你崇拜他们（例如，他们的名声，他们的魅力，他们的职业）', NULL, '你的故乡（例如，乡村，小镇，大城市）', '老家博尔顿承载的童年时光', '重要之人赠予的物品（例如，戒指，日志，地图）', '一串带着银质挂坠的古老项链（她爷爷的礼物）', '忠心耿耿（例如，负担朋友的责任，从未违背誓言，为信念而死）', '忠诚', 'possessions', '她敬爱的爷爷送给她的礼物');
-INSERT INTO "backgrounds" VALUES ('2ce488b418224f9354ce70d4d77c9a8360fa142018ab9a8c68d82ba7dc999b7e', '科学万能！（例如，进化论，低温学，太空探索）', '可知论', '游戏中的另一位NPC（请咨询守秘人获取详细信息）', '韦伯医生', '他们教会了你一些东西（例如，一个技能，如何去爱，如何成为一个男子汉/女人）', '调查员之路的引路人', '你最爱的学府（例如，中学，大学）', '我在阿卡姆大学的图书馆读到很多神秘学的知识', '重要之人赠予的物品（例如，戒指，日志，地图）', '韦伯医生给我的一枚硬币', '雄心勃勃（例如，梦想远大，目标是成为老板，渴求一切）', '希望能揭开神秘学的面纱，用科学解释神秘', 'reasons', '调查员之路的引路人');
-INSERT INTO "backgrounds" VALUES ('92de5b9900c85db83b1f662616efbc19a95728d122b06624825cb51e5d8c8a0e', '金钱就是力量，为了得到它你愿意付出一切（例如，贪婪，野心，冷酷）', '坚信人为财死，鸟为食亡', '指引你人生技能的人（例如，学校老师，导师，父亲）', '', '你欠了他们人情（例如，经济支持，困难时期的庇护，第一份工作）', '', '静思之地（例如，图书馆，乡间别墅，钓鱼场）', '', '宠物（例如，狗，猫，乌龟）', '', '赌徒/冒险家（例如，扑克脸，什么都尝试一次，活在危险边缘）', '', 'beliefs', '坚信人为财死，鸟为食亡');
-INSERT INTO "backgrounds" VALUES ('e11ad2911da9f6d3d73dbc6129318d3a8d6184ccb7ad63693e35ca441652b10c', '社团或秘密结社的一员（例如，共济会，妇女协会，匿名者）', '', '偶像或英雄（例如，电影明星，政治家，音乐家）', '梦想成为蝙蝠侠，隐藏于黑暗中保护世界', '他们赋予了你生命的意义（例如，你渴望成为他们那样的人，你追求他们的认同）', '', '与你的思想/信念相关的地方（例如，小教堂，麦加，巨石阵）', '', '你发现但尚未理解的东西（例如，不明语言的信件，奇怪的风琴，挖出来的银球）', '', '善待动物（例如，爱猫人士，农场出身，与马共舞）', '', 'important_people', '梦想成为蝙蝠侠，隐藏于黑暗中保护世界');
-INSERT INTO "backgrounds" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb8726024325b6b0de46e2808905d', '社团或秘密结社的一员（例如，共济会，妇女协会，匿名者）', '', '偶像或英雄（例如，电影明星，政治家，音乐家）', '梦想成为蝙蝠侠，隐于黑暗中保护世界', '他们赋予了你生命的意义（例如，你渴望成为他们那样的人，你追求他们的认同）', '', '与你的思想/信念相关的地方（例如，小教堂，麦加，巨石阵）', '', '体育用品（例如，棒球棍，签名棒球，鱼竿）', '', '梦想家（例如，愿景家，预言家，创造者）', '', 'important_people', '梦想成为蝙蝠侠，隐于黑暗中保护世界');
-
--- ----------------------------
--- Table structure for characterequipment
--- ----------------------------
-DROP TABLE IF EXISTS "character_equipment";
-CREATE TABLE "character_equipment" (
-  "character_id" char(64) NULL,
-  "equipment_id" int NULL,
-  "on_bag" tinyint(1) NULL,
-  "quantity" int NULL DEFAULT 1,
-  CONSTRAINT "CharacterEquipment_ibfk_1" FOREIGN KEY ("character_id") REFERENCES "characters" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT,
-  CONSTRAINT "CharacterEquipment_ibfk_2" FOREIGN KEY ("equipment_id") REFERENCES "equipment" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
-);
-
--- ----------------------------
--- Records of characterequipment
--- ----------------------------
-INSERT INTO "character_equipment" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', NULL, NULL, 1);
-
--- ----------------------------
--- Table structure for characters
--- ----------------------------
-DROP TABLE IF EXISTS "characters";
-CREATE TABLE "characters" (
-  "id" char(64) NOT NULL,
-  "name" text NULL,
-  "gender" text NULL,
-  "residence" text NULL,
-  "birthplace" text NULL,
-  "profession_id" int NULL,
-  "description" text NULL,
-  "if_npc" tinyint(1) NULL,
-  PRIMARY KEY ("id"),
-  CONSTRAINT "Characters_ibfk_1" FOREIGN KEY ("profession_id") REFERENCES "professions" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
-);
-
--- ----------------------------
--- Records of characters
--- ----------------------------
-INSERT INTO "characters" VALUES ('0000000000000000000000000000000000000000000000000000000000000000', '新调查员', NULL, NULL, NULL, 14, NULL, NULL);
-INSERT INTO "characters" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb8726024325b6b0de46e2808905d', 'NewMan', NULL, NULL, NULL, 3, NULL, NULL);
-INSERT INTO "characters" VALUES ('250de97665cf801aabcc2f17fd497004c6066d1ddbf451c65af4e507d0584cff', 'NewMan', NULL, NULL, NULL, 9, NULL, NULL);
-INSERT INTO "characters" VALUES ('2ce488b418224f9354ce70d4d77c9a8360fa142018ab9a8c68d82ba7dc999b7e', '安达', '男', '阿卡姆', '阿卡姆', 7, '安达，一个土生土长的阿卡姆人，怀揣着对科学的执念和对未知的渴求，在这座城镇的阴霾与秘密中成长。阿卡姆大学的图书馆是他灵魂的庇护所，书架间堆积着的卷册不仅是知识的殿堂，更是一扇扇窗，透视着他内心深处的那股幻想与对现实的追求。躲在昏黄灯光下，手指轻抚过泛黄的页角，他曾在此遇见那些形而上学的思想，迷失在无尽的神秘与知识的海洋中。\n\n安达的信仰是一种近乎固执的可知论，笃信科学的万能，认为一切都可以被数据、实验和法则解释。进化论、低温学、太空探索，这些理论是他思考的基石，让他对宇宙与生命的本质展开了无休止的探索。恰如他在韦伯医生的指导下，逐渐走向调查员的道路，安达的内心充满了对未知的敬畏与好奇，更包裹着一种想要用科学揭示一切的强烈渴望。\n\n在这条探索的旅途中，安达始终铭记着那些重要的人。他的导师韦伯医生不仅教会了他科学的方法论，更在他心中播下了探究世界真正面貌的种子。医生送给他的那枚硬币，成为了安达人生中的重要符号，象征着指南与启蒙，提醒着他更高的目标和更广阔的理想。在这个充满混沌与狂热的世界中，他不断努力，试图将神秘学与科学相结合，力求以理性之光破解隐藏在黑暗中的秘密。\n\n安达的性格如同他所追求的知识般雄心勃勃，怀揣着远大的梦想，企图揭开神秘的面纱。在一旁徘徊的阴影中，他似乎意识到，每一个秘密都意味着一种变革，而他自己正是这场变革的探路者。然而，伴随这份雄心，安达的内心深处也潜藏着一丝不安，对科学能否解释一切的怀疑，和对未知是否真有界限的惶恐。在这片发生着诡异变化的阿卡姆土地上，他将如何面对即将揭开的秘密，成为了他心中始终悬而未决的一道难题。', 0);
-INSERT INTO "characters" VALUES ('30b9f10eeae6912583596c08ce586452747a1fc4ac3cdcfd9049f13190259bdb', 'NewMan', NULL, NULL, NULL, 1, NULL, NULL);
-INSERT INTO "characters" VALUES ('563e5fab55f5d99ecdc5545690f272e73b58bb65def61f1d5c6a4c79ea492e69', 'NewMan', NULL, NULL, NULL, 5, NULL, NULL);
-INSERT INTO "characters" VALUES ('7ba3a38b9c4823d46ba1063a735bedd2bd08394325d63d1e71061a17eb6706d5', 'NewMan', NULL, NULL, NULL, 1, NULL, NULL);
-INSERT INTO "characters" VALUES ('92de5b9900c85db83b1f662616efbc19a95728d122b06624825cb51e5d8c8a0e', 'Eros', '男', '亚特兰大', '罗马', 1, 'Eros，一个25岁的古董收藏家，出生于历史悠久的罗马，现居于亚特兰大。他的职业使他对历史文物有着深厚的理解和敏锐的洞察力。他精通历史和艺术，能够准确评估和分析各种古董的价值与历史意义。Eros的智力达到75，展现出他在研究领域的专长，尤其是在历史和艺术方面的技能均高达90，这使得他在古董界有着相当的声望。\n\n性格方面，Eros是一位充满野心和贪婪的人，他坚信金钱就是力量，为了追求财富，他愿意付出一切。他的个性冷酷而果断，常常利用他出色的说服能力（90）来获取他想要的东西。在这个过程中，他可能会表现出赌徒和冒险家的特质，时常活在危险的边缘，尝试一次又一次的挑战。\n\n在身体属性上，Eros的力量为40，体质为60，虽然并不算强壮，但他的灵活度为50，能够在需要时迅速反应。他的外表得分为65，给人一种吸引人的感觉，这在与他人交往时助益良多。Eros的精神力量为60，保持着相对良好的理智，然而他在运气方面的评分仅为45，似乎常常需要依靠自己的努力来克服困难。\n\nEros拥有丰富的专业技能，尤其在战斗方面表现出色，战斗技能高达90，使他在危机时刻能够保护自己。尽管他对火器的掌握较为有限（20），但他同样具备一定的隐秘能力（20）和调查技巧（25）以应对各种情况。Eros通常在静思之地，如图书馆或乡间别墅中思考和研究，那里是他灵感的源泉。\n\n至于他的社交关系，Eros在生活中有一些重要的人物影响着他，尽管具体细节未曾披露。他的背景中提到他欠下人情，可能与经济支持或在困难时期的庇护有关，这些都在潜移默化中塑造了他的性格与人生观。在无尽的追求财富与古董的过程中，Eros始终在寻找那些能够提升他地位和财富的机会。', 0);
-INSERT INTO "characters" VALUES ('99bf5416372392e4164b33195e2f2fd2a2eb7962c6800c673cd9fd8d7fe13976', 'NewMan', NULL, NULL, NULL, 3, NULL, NULL);
-INSERT INTO "characters" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', '艾米莉亚·韦伯', NULL, NULL, NULL, NULL, '艾米利亚是个20出头，看起来又瘦又憔悴但是却不失魅力的女人，她有着深黑的头发和醒目的接近无色的浅灰色迷人大眼睛。她穿过丛林之后她头发凌乱、浑身淤痕并且严重的着了凉，身上的衣物也被挂得破破烂烂，整个人处于惊吓过度状态。她不会故意撒谎或者掩饰什么，除非被认为是“疯了”。她不太愿意谈起她的童年创伤：她15岁时由于双亲去世，曾经在波士顿的社会少女疗养院中接受过一段时间的严重情绪失控以及黑夜恐惧症治疗。她和她祖父在一起生活了7个多月，祖父对艾米利亚非常的好。\r\n\r\n{{只有在细心的护理和温暖的环境下她的情况才能得到好转。}}\r\n\r\n惊吓过度状态：\r\n\r\n由于最近收到的惊吓，她将处于一种茫然、紧张并且呆滞的状态中，只有被准确的提问时她才会做出回应（成功的魅力或者说服将会有一定的帮助）。\r\n\r\n好转状态：\r\n\r\n当她恢复过来的时候，在谈话的过程中她将显示出受过良好的国际性教育的特质，以及一口中产阶级特质的浓厚博尔顿口音。\r\n\r\n{{她对医生的秘密一无所知，只觉得那是个“令人毛骨悚然的骨灰盒”。如果被问及，她会回忆起在博尔顿老家的童年时光，尽管那之后是噩梦一般的经历。这是对她爷爷无比重要的一种传家宝，而且幼小的她曾经被告知过千万别去碰这个匣子，她很听话的照办了。}}', 1);
-INSERT INTO "characters" VALUES ('b388656b342f4254a34535090f24eb7e4772035bd75f6e0945fb9abee609ccd6', 'NewMan', NULL, NULL, NULL, 2, NULL, NULL);
-INSERT INTO "characters" VALUES ('e11ad2911da9f6d3d73dbc6129318d3a8d6184ccb7ad63693e35ca441652b10c', 'NewMan', NULL, NULL, NULL, 3, NULL, NULL);
-INSERT INTO "characters" VALUES ('ee491f447b5f83b327c89339d8b7ee3da529704d2ee674c828dd348b19b08c94', 'NewMan', NULL, NULL, NULL, 6, NULL, NULL);
-
--- ----------------------------
--- Table structure for derivedattributes
--- ----------------------------
+-- Table: derived_attributes (衍生属性)
 DROP TABLE IF EXISTS "derived_attributes";
 CREATE TABLE "derived_attributes" (
   "character_id" char(64) NULL,
@@ -137,135 +129,7 @@ CREATE TABLE "derived_attributes" (
   UNIQUE ("character_id")
 );
 
--- ----------------------------
--- Records of derivedattributes
--- ----------------------------
-INSERT INTO "derived_attributes" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', 50, 0, 0, 9, 8, '0', 0, 0);
-INSERT INTO "derived_attributes" VALUES ('7ba3a38b9c4823d46ba1063a735bedd2bd08394325d63d1e71061a17eb6706d5', 60, 12, 100, 12, 7, '0', 0, 320);
-INSERT INTO "derived_attributes" VALUES ('92de5b9900c85db83b1f662616efbc19a95728d122b06624825cb51e5d8c8a0e', 60, 12, 150, 12, 7, '0', 0, 248);
-INSERT INTO "derived_attributes" VALUES ('e11ad2911da9f6d3d73dbc6129318d3a8d6184ccb7ad63693e35ca441652b10c', 55, 11, 120, 11, 7, '0', 0, 360);
-INSERT INTO "derived_attributes" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb8726024325b6b0de46e2808905d', 65, 13, 130, 11, 8, '+1D4', 1, 264);
-
--- ----------------------------
--- Table structure for equipment
--- ----------------------------
-DROP TABLE IF EXISTS "equipment";
-CREATE TABLE "equipment" (
-  "id" INTEGER PRIMARY KEY,
-  "name" text NULL,
-  "skill" text NULL,
-  "price" int NULL,
-  "damage" int NULL,
-  "ammo_capacity" int NULL
-);
-
--- ----------------------------
--- Records of equipment
--- ----------------------------
-
--- ----------------------------
--- Table structure for events
--- ----------------------------
-DROP TABLE IF EXISTS "events";
--- 创建 'events' 表
-CREATE TABLE "events" (
- "event_id" INTEGER PRIMARY KEY AUTOINCREMENT,
- "event_info" TEXT NULL,
- "map_id" INTEGER NULL,
- "if_unique" INTEGER NULL,
- "pre_event_ids" TEXT NULL,
- "happened_result" INTEGER NULL,
- "test_required_id" INTEGER NULL,
- "hard_level" INTEGER NULL,
- "success_modify_id" INTEGER NULL,
- "success_modify_num" INTEGER NULL,
- "fail_modify_id" INTEGER NULL,
- "fail_modify_num" INTEGER NULL,
- "success_result_info" TEXT NULL,
- "fail_result_info" TEXT NULL
-);
-
--- Records of events
-INSERT INTO "events" ("event_id", "event_info", "map_id", "if_unique", "pre_event_ids", "happened_result", "test_required_id", "hard_level", "success_modify_id", "success_modify_num", "fail_modify_id", "fail_modify_num", "success_result_info", "fail_result_info") VALUES
-(1, '调查员驾车在阿卡姆郊外行驶，遭遇突如其来的风暴。', 1, 1, NULL, -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(2, '艾米利亚·韦伯突然出现在马路中央，调查员紧急刹车以避免撞上她。', 1, 1, '1', -1, 22, 2, NULL, NULL, 10, -1, '调查员成功停车，艾米利亚未受伤，调查员可以下车与她交谈。', '汽车擦过艾米利亚，导致她被擦伤并倒地。'),
-(3, '调查员决定不下车帮助艾米利亚，驱车离开。', 1, 1, '2', -1, NULL, NULL, 10, -1, NULL, NULL, '调查员驱车离去，将艾米利亚留在风暴中。', '艾米利亚的惨叫声在身后渐行渐远。'),
-(5, '调查员下车帮助艾米利亚。', 1, 1, '2', -1, NULL, NULL, NULL, NULL, NULL, NULL, '为艾米利亚提供庇护、保暖或急救。', NULL),
-(6, '通过急救或医学检定，判断艾米利亚身上的淤青是在一小时前留下的。', 1, 0, '5', -1, 29, 2, NULL, NULL, NULL, NULL, '调查员成功判断出淤青的时间。', '调查员未能判断出淤青的时间。'),
-(7, '调查员试图与艾米利亚交谈，但艾米利亚精神恍惚。', 1, 0, '5', -1, 34, 2, NULL, NULL, NULL, NULL, '调查员通过规避敏感词汇，避免艾米利亚情绪进一步恶化。', '艾米利亚情绪激动，更加痛苦。'),
-(8, '调查员观察艾米利亚身上的古老金币式挂坠。', 1, 0, '5', -1, 30, 3, NULL, NULL, NULL, NULL, '调查员成功辨认出挂坠上的符号是古老的阿克洛语符号。', '调查员未能辨认出符号，只觉得它很古怪。'),
-(9, '艾米利亚提到“祖父”或“光”等词汇。', 1, 0, '7', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(10, '调查员在原地停留，风暴恶化。', 1, 0, '5', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(11, '汽车因风暴肆虐而抛锚。', 1, 1, '10', -1, 22, 3, NULL, NULL, 10, -1, '汽车成功抵抗风暴，继续前行。', '汽车抛锚，无法继续使用。'),
-(12, '调查员在暴风雨中离开汽车，全身衣物被浸湿。', 1, 0, '10', -1, 2, 2, NULL, NULL, 13, -1, '调查员成功抵抗严寒。', '调查员体温下降，受到寒冷伤害。'),
-(13, '调查员向本地人询问附近情况。', 1, 0, '5', -1, 33, 1, NULL, NULL, NULL, NULL, '调查员成功得知附近一英里内有带咖啡馆的加油站。', '未能获得有用信息。'),
-(14, '调查员进入附近丛林进行搜寻。', 1, 0, '5', -1, 7, 3, NULL, NULL, 10, -1, '调查员感到被注视的不安感，但无所发现。', '调查员感到极度不安，可能遭遇死光。'),
-(15, '调查员在丛林中遭遇死光。', 1, 1, '14', -1, NULL, NULL, 10, -3, NULL, NULL, NULL, '调查员被怪异的模糊影子跟踪或攻击。'),
-(16, '调查员决定折返回阿卡姆。', 1, 0, '5', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(17, '汽车因天气恶劣而熄火、打滑或出车祸。', 1, 1, '16', -1, 22, 2, NULL, NULL, 10, -1, '调查员成功驾驶汽车返回。', '汽车发生故障，无法前进。'),
-(18, '调查员折返时遭遇死光攻击。', 1, 1, '17', -1, NULL, NULL, 10, -3, NULL, NULL, NULL, '死光对调查员发起攻击。'),
-(19, '一棵被闪电击倒的大树挡住去路。', 1, 1, '17', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(20, '调查员与艾米利亚同行，并载她离开。', 1, 0, '5,23', -1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(21, '在闪电时，调查员观察路边的树林。', 1, 0, '20', -1, 24, 3, NULL, NULL, NULL, NULL, '调查员成功发现潜藏在树林后的古怪白光。', '调查员未能发现白光。'),
-(22, '死光开始追踪并攻击调查员的车辆。', 1, 1, '3', -1, NULL, NULL, 10, -1, NULL, NULL, NULL, '调查员开始被一团模糊的影子跟踪，感到莫大的危机。'),
-(23, '调查员询问艾米利亚的名字。', 1, 0, '5', -1, 34, 2, NULL, NULL, NULL, NULL, '艾米利亚在恍惚中说出了自己的名字：艾米利亚·韦伯。', '艾米利亚神志不清，未能回答调查员的问题。');
-
--- ----------------------------
--- Table structure for maps
--- ----------------------------
-DROP TABLE IF EXISTS "maps";
-CREATE TABLE "maps" (
-  "id" INTEGER PRIMARY KEY,
-  "first_entry_info" text NULL,
-  "map_info" text NULL,
-  "items" text NULL,
-  "accessible_locations" text NULL,
-  "event_ids" text NULL,
-  "character_ids" text NULL
-);
-
--- ----------------------------
--- Records of maps
--- ----------------------------
-INSERT INTO "maps" VALUES (1, '尽管调查员向北努力的逃离这场暴雨的侵袭，风暴最终还是追上了调查员，并且在风暴中漆黑而不断被闪电撕裂的夜幕降临了。大雨磅礴的路面上调查员只能如同爬行般的缓速挪动，这样穿过黑暗的前灯才能保证调查员没有迷路。唯一可以肯定的是，目前正在身后向调查员逼近的恶劣气候，只将会比调查员在经历的更加糟糕。本应善乏可陈的旅程也因此而变得危险而前途叵测。\r\n       有东西毫无预示的挡在了调查员的面前，这是一个如同凭空冒出来般的苍白身影。为避免撞上去而紧急的刹车和扭转车头的时间，调查员刚好看清了这个身影是一个惊恐的女人——她大大的睁着眼睛并发出凄厉的惨叫声：“啊— —！” {进行[驾驶]检定，如果驾驶检定成功：调查员完美避开了艾米莉亚，但是车子撞到路边的大树上。如果驾驶检定失败：调查员勉强避开了艾米莉亚，艾米利亚受到擦伤。}{注意：艾米利亚·韦伯不可以在目前死亡。}\r\n\r\n        碰撞事故后，调查员的车子会彻底熄火，无论怎样都无法发动。附近的路牌显示直走一英里有个带咖啡馆的加油站，也许可以去避难。{引导调查员前往加油站}', '在风暴肆虐的黑夜中，调查员回到了园林大道入口处——阿卡姆郊外一条孤寂的名为园林大道的道路上。强烈的风暴让任何人无法离开此地，甚至直到黎明到来。调查员逐步被卷进一系列无论对精神还是肉体都是严峻考验的噩梦般的超自然事件中。虽然调查员可以选择查明发生这一切的原因和理由，但他的终极目标是活过这一夜。\r\n\r\n        园林大道入口处附近的森林曾经都是一片苹果园，但是目前已经被荒废，而且很大程度上充斥满了榉木和常春藤这样的外来物种。张牙舞爪的树林在这样风雨交加的夜色中，如同一场阴暗的噩梦般可怕。刺骨的寒风在耳边呼啸，这样恶劣的天气下呆在户外绝不是个好主意。', NULL, '2,3', '1,2', 'ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7');
-
--- ----------------------------
--- Table structure for professions
--- ----------------------------
-DROP TABLE IF EXISTS "professions";
-CREATE TABLE "professions" (
-  "id" INTEGER PRIMARY KEY,
-  "title" text NULL,
-  "description" text NULL
-);
-
--- ----------------------------
--- Records of professions
--- ----------------------------
-INSERT INTO "professions" VALUES (1, '古董收藏家', '我是一位专注于历史文物研究的专家。凭借深厚的历史知识和艺术鉴赏能力,我能准确评估和分析各类古董文物的价值与历史意义。');
-INSERT INTO "professions" VALUES (2, '艺术家', '我是一位追求艺术完美的创作者。我灵巧的双手能将灵感转化为触动人心的艺术品,同时也善于通过作品与人交流。');
-INSERT INTO "professions" VALUES (3, '神父', '我是一位虔诚的信仰传播者。通过对神秘学的研究、出色的交际能力和对人性的深刻理解,我引导着信徒寻找精神慰藉。');
-INSERT INTO "professions" VALUES (4, '罪犯', '我是游走在法律边缘的暗影人物。精通巧手技巧和各类武器,在危险时刻总能依靠灵活的身手脱身。');
-INSERT INTO "professions" VALUES (5, '医生', '我是一位专业的医学工作者。依靠扎实的医学知识、灵巧的手术技能和科学的思维方式,我致力于治愈病患、拯救生命。');
-INSERT INTO "professions" VALUES (6, '工程师', '我是一位精通技术的问题解决者。凭借对机械、科学和电子领域的深入理解,我能设计、建造和修复各种复杂系统。');
-INSERT INTO "professions" VALUES (7, '艺人', '我是一位舞台上的表演大师。通过对人性的洞察和精湛的艺术表现力,我能在各种场合赢得观众的喝彩。');
-INSERT INTO "professions" VALUES (8, '农场主', '我是一位经验丰富的农场经营者。精通农机驾驶和维护,善于观察天气变化,也懂得与人打交道。必要时,我也能用枪保护自己的财产。');
-INSERT INTO "professions" VALUES (9, '黑客', '我是一位数字世界的探索者。通过精湛的电子技术和敏锐的观察力,我能深入任何数字系统的核心。');
-INSERT INTO "professions" VALUES (10, '记者', '我是一位追寻真相的新闻工作者。凭借出色的交际能力、对人性的洞察和细致的调查技巧,我致力于还原每一个事件的真相。');
-INSERT INTO "professions" VALUES (11, '律师', '我是一位精通法律的辩护者。通过丰富的法律知识、出色的交际能力和对人性的理解,我为当事人争取最大的法律权益。');
-INSERT INTO "professions" VALUES (12, '图书馆管理员', '我是一位知识的守护者和引路人。精通图书分类和检索,对科学和神秘学都有深入研究,能帮助人们找到他们需要的任何信息。');
-INSERT INTO "professions" VALUES (13, '军官', '我是一位经验丰富的军事指挥官。精通枪械使用,善于领导和激励部下,能准确把握战场局势和人员心理。');
-INSERT INTO "professions" VALUES (14, '邪教徒', '我是一位狂热的信仰追随者。深谙神秘学知识,善于洞察和影响他人心理,在危险时刻总能化险为夷。');
-INSERT INTO "professions" VALUES (15, '警探', '我是一位专业的刑事侦查员。凭借敏锐的洞察力、对犯罪心理的理解和丰富的办案经验,我能破解各种复杂案件。');
-INSERT INTO "professions" VALUES (16, '警察', '我是一位尽职的治安维护者。精通驾驶和各类武器使用,在紧急情况下能迅速反应并处理各种突发事件。');
-INSERT INTO "professions" VALUES (17, '私家侦探', '我是一位独立的真相探寻者。通过细致的观察、隐秘的跟踪和巧妙的交谈,我能发现并揭示各种隐藏的秘密。');
-INSERT INTO "professions" VALUES (18, '教授', '我是一位博学多才的学者。精通文献检索,深谙教育心理学,在我的专业领域具有独到的见解和研究成果。');
-INSERT INTO "professions" VALUES (19, '士兵', '我是一位训练有素的战士。精通各种战斗技能,面对危险时能迅速反应并作出正确判断。');
-INSERT INTO "professions" VALUES (20, '部落成员', '我是一位与自然紧密相连的部落成员。精通古老的神秘仪式,具备敏锐的观察力和出色的生存技能。');
-
--- ----------------------------
--- Table structure for skills
--- ----------------------------
+-- Table: skills (技能)
 DROP TABLE IF EXISTS "skills";
 CREATE TABLE "skills" (
   "character_id" char(64) NULL,
@@ -290,12 +154,233 @@ CREATE TABLE "skills" (
   CONSTRAINT "Skills_ibfk_1" FOREIGN KEY ("character_id") REFERENCES "characters" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
 );
 
--- ----------------------------
--- Records of skills
--- ----------------------------
-INSERT INTO "skills" VALUES ('ad29155d19c9d6a8a744fc1d794aa8c042b75dc4830a85d6ab87656d6f8d81c7', 25, 20, 35, 10, 20, 40, 35, 10, 10, 40, 25, 50, 5, 20, 5, 45, 20);
-INSERT INTO "skills" VALUES ('2ce488b418224f9354ce70d4d77c9a8360fa142018ab9a8c68d82ba7dc999b7e', 35, 20, 20, 10, 20, 20, 25, 10, 10, 10, 15, 5, 90, 0, 50, 90, 90);
-INSERT INTO "skills" VALUES ('250de97665cf801aabcc2f17fd497004c6066d1ddbf451c65af4e507d0584cff', 25, 90, 20, 10, 90, 20, 30, 50, 15, 10, 10, 5, 5, 0, 5, 15, 10);
-INSERT INTO "skills" VALUES ('92de5b9900c85db83b1f662616efbc19a95728d122b06624825cb51e5d8c8a0e', 90, 20, 20, 10, 20, 20, 25, 10, 10, 90, 10, 5, 5, 0, 90, 90, 20);
-INSERT INTO "skills" VALUES ('e11ad2911da9f6d3d73dbc6129318d3a8d6184ccb7ad63693e35ca441652b10c', 90, 20, 20, 10, 20, 20, 80, 10, 10, 10, 10, 5, 90, 0, 5, 90, 90);
-INSERT INTO "skills" VALUES ('20eb216bc7cace6a0b4bc43f268361f7246bb8726024325b6b0de46e2808905d', 25, 20, 90, 10, 20, 80, 25, 10, 10, 10, 10, 5, 80, 0, 5, 80, 70);
+-- Table: backgrounds (背景)
+DROP TABLE IF EXISTS "backgrounds";
+CREATE TABLE "backgrounds" (
+  "character_id" char(64) NULL,
+  "beliefs" text NULL,
+  "beliefs_details" text NULL,
+  "important_people" text NULL,
+  "important_people_details" text NULL,
+  "reasons" text NULL,
+  "reasons_details" text NULL,
+  "places" text NULL,
+  "places_details" text NULL,
+  "possessions" text NULL,
+  "possessions_details" text NULL,
+  "traits" text NULL,
+  "traits_details" text NULL,
+  "keylink" text NULL,
+  "keylink_details" text NULL,
+  UNIQUE ("character_id"),
+  CONSTRAINT "Backgrounds_ibfk_1" FOREIGN KEY ("character_id") REFERENCES "characters" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT
+);
+
+
+/* ---------------------------------
+ Section 2: 填充第一章基础设定数据
+---------------------------------
+*/
+
+-- 填充世界初始状态
+INSERT INTO "world_state" ("state_key", "state_value") VALUES
+('weather', '"Raging Storm"'),
+('time_of_day', '"Night"'),
+('game_turn', '0');
+
+-- 填充地图信息
+INSERT INTO "maps" ("id", "map_name", "map_info", "accessible_locations") VALUES
+(1, '阿卡姆郊外公路', '在风暴肆虐的黑夜中，调查员回到了阿卡姆郊外一条孤寂的名为园林大道的道路上。张牙舞爪的树林在风雨交加的夜色中，如同一场阴暗的噩梦般可怕。', '[2, 3]'),
+(2, '加油站咖啡馆', '一个24小时营业的加油站附属咖啡馆，是附近唯一的灯光。', '[1]'),
+(3, '阿卡姆市区方向', '返回阿卡姆的道路，但天气异常恶劣。', '[1]');
+
+-- 填充场景实体
+INSERT INTO "interactable_objects" ("object_id", "map_id", "object_name", "description_initial", "current_state") VALUES
+(101, 1, '调查员的车', '调查员的座驾，现在正艰难地对抗着风暴。', '{"status": "running", "capacity": 4, "passengers": []}'),
+(102, 1, '古老的金币式挂坠', '一条装饰着某个似乎是古代金币的老旧银质挂坠。', '{"owner": "amelia_weber"}');
+
+
+/* ----------------------------------
+ Section 3: 填充第一章核心角色数据
+----------------------------------
+*/
++ 
+-- 填充角色: 艾米利亚·韦伯
+INSERT INTO "characters" ("id", "name", "if_npc", "gender", "description", "current_location_id", "current_vehicle_id", "current_goal", "status") VALUES
+('amelia_weber', '艾米利亚·韦伯', 1, '女',
+'艾米利亚是个20出头，看起来又瘦又憔悴但是却不失魅力的女人。她正处于严重的创伤后应激状态，对外界刺激反应极大，语言能力减退，只会重复一些破碎的词语或发出无意义的呜咽声。她的所有行为都围绕着寻找安全感和躲避想象中的威胁。',
+1, NULL, '(非理性)不惜一切代价寻找安全感，躲避看不见的威胁', '创伤后应激，精神恍惚，语言混乱');
+
+-- 填充角色: 死光
+INSERT INTO "characters" ("id", "name", "if_npc", "description", "current_location_id", "current_goal", "status") VALUES
+('deathlight', '死光', 1,
+'它看起来像一团会让观看者看起来又恶心又怪异的，泼洒出来的银白色墨汁。它是一个没有声带的掠食性实体，【无法说话】，只会通过无声的移动和散发出的非人气息来表达意图。在本章中，它处于【饱食状态】，没有强烈的攻击欲望。',
+1, '保持隐蔽，观察并评估附近潜在的能量源', '饱食后潜伏，隐匿');
+
+-- 填充 艾米利亚·韦伯 的数据
+INSERT INTO "attributes" ("character_id", "strength", "constitution", "size", "dexterity", "appearance", "intelligence", "power", "education", "luck") VALUES
+('amelia_weber', 40, 50, 45, 70, 60, 80, 50, 85, 50);
+
+INSERT INTO "derived_attributes" ("character_id", "sanity", "hit_points", "move_rate", "damage_bonus", "build") VALUES
+('amelia_weber', 50, 9, 8, '0', 0);
+
+INSERT INTO "skills" ("character_id", "fighting", "firearms", "dodge", "mechanics", "drive", "stealth", "investigate", "sleight_of_hand", "electronics", "history", "science", "medicine", "occult", "library_use", "art", "persuade", "psychology") VALUES
+('amelia_weber', 25, 20, 35, 10, 20, 40, 35, 10, 10, 40, 25, 30, 5, 20, 5, 45, 20);
+
+INSERT INTO "backgrounds" ("character_id", "beliefs", "important_people", "possessions", "traits") VALUES
+('amelia_weber', '科学揭示世界的真相', '她爷爷韦伯医生', '一串带着银质挂坠的古老项链', '忠诚');
+
+-- 填充 死光 的数据
+INSERT INTO "attributes" ("character_id", "strength", "constitution", "size", "dexterity", "power", "intelligence") VALUES
+('deathlight', 70, 70, 90, 80, 100, 80);
+
+INSERT INTO "derived_attributes" ("character_id", "hit_points", "damage_bonus", "build", "move_rate", "magic_points") VALUES
+('deathlight', 16, '+1D6', 2, 6, 20);
+
+INSERT INTO "skills" ("character_id", "fighting", "dodge", "stealth") VALUES
+('deathlight', 70, 40, 25);
+
+
+/* ----------------------------
+ Section 4: 填充第一章事件
+----------------------------
+*/
+
+INSERT INTO "events" ("event_id", "event_info", "map_id", "if_unique", "pre_event_ids", "preconditions", "effects") VALUES
+-- Event 1: 遭遇艾米利亚·韦伯
+(1, '遭遇艾米利亚·韦伯', 1, 1, NULL,
+'{"agent_state": {"agent_id": "player", "current_location_id": 1, "current_vehicle_id": 101}}',
+'{
+  "skill_check": {"required": true, "character_id": -1, "skill_id": 22, "difficulty": 2},
+  "outcomes": {
+    "suspense_narrative": "有东西毫无预示的挡在了调查员的面前，这是一个如同凭空冒出来般的苍白身影。为避免撞上去，调查员下意识地转动方向盘并踩下刹车。",
+    "success": {
+      "narrative": "多亏调查员精准的操作，车子擦着她的身体停下，没有撞到她。那个女人睁着大大的眼睛，发出凄厉的惨叫声。",
+      "npc_state_change": [{ "character_id": "amelia_weber", "new_status": "神志恍惚" }]
+    },
+    "failure": {
+      "narrative": "调查员猛踩刹车，但车辆在积水路面上打滑。车身擦过她的身体，将她刮倒在地。",
+      "npc_state_change": [{ "character_id": "amelia_weber", "new_status": "神志恍惚且受伤" }],
+      "state_changes": [{ "target": "amelia_weber", "attribute_id": 13, "change": -1 }, { "target": "player", "attribute_id": 10, "change": -1 }]
+    }
+  }
+}'),
+-- Event 2: 玩家选择驱车离开
+(2, '驱车离开', 1, 1, '[1]',
+'{"player_action": {"intent": "leave_woman"}}',
+'{
+  "narrative_injection": "调查员将她留在身后，她的惨叫声被风雨声吞没，渐渐远去。调查员的心头涌上一丝不安，仿佛将一个无助的灵魂留给了黑暗。同时，调查员感到车后方似乎有什么东西跟了上来。",
+  "state_changes": [{ "target": "player", "attribute_id": 10, "change": -5 }],
+  "trigger_event": 3
+}'),
+-- Event 3: 死光开始追踪玩家
+(3, '死光开始追踪玩家', 1, 1, '[2]', NULL,
+'{
+  "narrative_injection": "一股被监视的感觉袭来。调查员从后视镜瞥见一团模糊的白光正在迅速逼近，莫大的危机感让调查员心生恐惧。",
+  "state_changes": [{ "target": "player", "attribute_id": 10, "change": -1 }]
+}'),
+-- Event 4: 玩家选择下车帮助
+(4, '下车帮助艾米利亚', 1, 1, '[1]',
+'{"player_action": {"intent": "help_woman"}}',
+'{
+  "narrative_injection": "调查员决定下车帮助她。她全身湿透，颤抖不止，显然处于极度惊吓之中。她并没携带任何的身份标示，仅带着一条装饰着某个似乎是古代金币的老旧银质挂坠。",
+  "state_changes": [{ "target": "player", "set_state": {"current_vehicle_id": null} }]
+}'),
+-- Event 5: 回忆附近是否有避难所
+(5, '回忆附近是否有避难所', 1, 0, '[4]',
+'{"player_action": {"intent": "use_skill", "skill_check_request": ["intelligence"]}}',
+'{
+  "skill_check": {"required": true, "character_id": -1, "skill_id": 6, "difficulty": 1},
+  "outcomes": {
+    "suspense_narrative": "在这荒郊野外，调查员开始努力回忆这附近是否有什么避难所。",
+    "success": { "narrative": "调查员猛然想起（知识检定成功），大约一英里外应该有一个带咖啡馆的加油站。" },
+    "failure": { "narrative": "调查员对这片区域一无所知，脑中一片空白。" }
+  }
+}'),
+-- Event 6: 搜寻丛林
+(6, '搜寻丛林', 1, 0, '[4]',
+'{"player_action": {"intent": "inspect", "target": "丛林"}, "agent_state": {"agent_id": "player", "current_vehicle_id": null}}',
+'{
+  "skill_check": {"required": true, "character_id": -1, "skill_id": 7, "difficulty": 2},
+  "outcomes": {
+    "suspense_narrative": "调查员决定进入路边的丛林搜寻线索。",
+    "success": { "narrative": "调查员感到一种被某物注视的不快感，但除了湿透的树木和泥土，最终一无所获。" },
+    "failure": {
+      "narrative": "调查员感到一种被某物注视的不快感越来越强烈，仿佛有什么东西正在暗中跟随着调查员...",
+      "trigger_event": 7
+    }
+  }
+}'),
+-- Event 7: 在丛林中遭遇死光
+(7, '在丛林中遭遇死光', 1, 1, '[6]', NULL,
+'{
+  "narrative_injection": "正当调查员因一无所获而准备放弃时，那股被注视的感觉猛然增强！一团怪异而模糊的白光从树林深处向调查员逼近，调查员感受到了前所未有的恐惧。",
+  "state_changes": [{ "target": "player", "attribute_id": 10, "change": -3 }]
+}'),
+-- Event 8: 观察古老的金币式挂坠
+(8, '观察古老的金币式挂坠', 1, 0, '[4]',
+'{"player_action": {"intent": "inspect", "target": "古老的金币式挂坠"}}',
+'{
+  "skill_check": {"required": true, "character_id": -1, "skill_id": 30, "difficulty": 3},
+  "outcomes": {
+    "suspense_narrative": "调查员凑近观察那条被艾米利亚视作珍宝的旧银质挂坠，上面的符号看起来非常古怪，似乎蕴含着某种不祥的意味。",
+    "success": { "narrative": "调查员的神秘学知识告诉你，这些不规则的符号是古老的阿克洛语，通常用于祭司阶层的皇家典礼。这绝非凡物。" },
+    "failure": { "narrative": "调查员无法辨认上面的符号，只能感觉到它的年代久远，散发着一丝难以言喻的古怪气息。" }
+  }
+}'),
+-- Event 9: 让艾米利亚上车
+(9, '让艾米利亚上车', 1, 1, '[4]',
+'{"player_action": {"intent": "take_amelia_in_car"}}',
+'{
+  "narrative_injection": "调查员搀扶着艾米利亚上了车，她缩在副驾驶座上，依然在微微颤抖。",
+  "state_changes": [
+      { "target": "player", "set_state": {"current_vehicle_id": 101} },
+      { "target": "amelia_weber", "set_state": {"current_vehicle_id": 101} }
+  ]
+}'),
+-- Event 10: 观察到林中白光
+(10, '观察到林中白光', 1, 0, '[9]',
+'{"player_action": {"intent": "inspect", "target": "树林"}, "agent_state": {"agent_id": "player", "current_vehicle_id": 101}}',
+'{
+  "skill_check": {"required": true, "character_id": -1, "skill_id": 24, "difficulty": 3},
+  "outcomes": {
+      "suspense_narrative": "调查员顶着风雨，眯起眼睛仔细观察路边的树林。",
+      "success": { "narrative": "在一道闪电划破夜空时，调查员敏锐地瞥见树林深处有一道转瞬即逝的古怪白光。它似乎在跟踪你们，让调查员感到一阵不安。" },
+      "failure": { "narrative": "风雨太大了，调查员什么也看不清。" }
+    }
+}'),
+-- Event 11: 大树挡住去路
+(11, '大树挡住去路', 1, 1, NULL,
+'{"player_action": {"intent": "move", "target_location_id": 3}}',
+'{
+  "narrative_injection": "当调查员试图掉头返回阿卡姆时，一道耀眼的闪电撕裂夜空，猛地劈在路边的一棵大树上！大树轰然倒下，沉重地横亙在路上，彻底断绝了调查员的退路。",
+  "world_state_change": {"location_3_accessible": "false"},
+  "trigger_event": 12
+}'),
+-- Event 12: 艾米利亚对倒下的大树的反应
+(12, '艾米利亚对倒下的大树的反应', 1, 1, '[11]', NULL,
+'{
+  "skill_check": {"required": true, "character_id": "amelia_weber", "skill_id": 7, "difficulty": 1},
+  "outcomes": {
+    "suspense_narrative": "巨大的声响在耳边炸响。",
+    "success": {
+      "narrative": "这声巨响让艾米利亚浑身一颤，但她只是抓紧了衣袖，强忍住了尖叫。",
+      "npc_state_change": [{"character_id": "amelia_weber", "new_status": "受惊但镇定"}]
+    },
+    "failure": {
+      "narrative": "这声巨响击溃了艾米利亚脆弱的神经，她发出一声遏制不住的尖叫，蜷缩在座位上瑟瑟发抖。",
+      "npc_state_change": [{"character_id": "amelia_weber", "new_status": "惊恐发作"}]
+    }
+  }
+}'),
+-- Event 13: 艾米利亚尝试回忆祖父的事
+(13, '艾米利亚尝试回忆祖父的事', 1, 0, '[9]',
+'{"player_action": {"target": "amelia_weber", "topic": "祖父"}}',
+'{
+  "skill_check": {"required": true, "character_id": "amelia_weber", "skill_id": 6, "difficulty": 2},
+  "outcomes": {
+      "suspense_narrative": "听到‘祖父’这个词，艾米利亚的眼神有了一丝波动，她努力地在混乱的记忆中搜索着什么。",
+      "success": { "narrative": "她似乎想起了一些事情，断断续续地说：‘……他的钥匙……总是在……怀表口袋里……’" },
+      "failure": { "narrative": "她痛苦地摇了摇头，‘……我……想不起来……一片混乱……’" }
+    }
+}');
