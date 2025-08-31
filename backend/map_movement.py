@@ -128,10 +128,8 @@ class MapMovementManager:
             objects_state = {}
             for obj in objects:
                 obj_id = str(obj['object_id'])
-                objects_state[obj_id] = {
-                    "name": obj['object_name'],
-                    "state": json.loads(obj['current_state']) if obj['current_state'] else {}
-                }
+                # 保持与character.py中相同的数据结构
+                objects_state[obj_id] = json.loads(obj['current_state']) if obj['current_state'] else {}
             
             # 获取地图的可访问性信息
             accessible_maps = self.get_accessible_maps(map_id)

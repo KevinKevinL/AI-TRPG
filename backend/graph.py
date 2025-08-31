@@ -16,11 +16,12 @@ from databaseManager import db_manager
 from character_state import get_current_character_id
 from memory_manager import memory_manager
 from map_movement import map_movement_manager
+from npc_filter import npc_filter
 from redis_manager import (
     get_world_state, save_world_state,
     get_map_state, save_map_state,
     get_session_state, save_session_state,
-    get_character_sheet,
+    get_character_sheet, save_character_sheet,
     get_conversation_history, save_conversation_history,
     get_completed_event_ids, save_completed_event_ids,
     apply_state_changes, apply_map_state_changes
@@ -97,8 +98,21 @@ async def orchestrator_agent(state: AgentState):
     
     npc_ids = map_state.get('npcs', [])
     print(f"[Orchestrator] 从 map_state 读取 NPC IDs: {npc_ids}")
-    state['active_npcs'] = [get_character_sheet(npc_id).get('info', {}) for npc_id in npc_ids if get_character_sheet(npc_id)]
-    print(f"[Orchestrator] active_npcs 加载完成: {[n.get('id') for n in state['active_npcs']]}")
+    
+    # 先加载所有NPC的基础信息
+    all_npcs = []
+    for npc_id in npc_ids:
+        npc_sheet = get_character_sheet(npc_id)
+        if npc_sheet and npc_sheet.get('info'):
+            npc_info = npc_sheet['info']
+            npc_info['id'] = npc_id
+            all_npcs.append(npc_info)
+    
+    print(f"[Orchestrator] 所有NPC加载完成: {[n.get('id') for n in all_npcs]}")
+    
+    # 暂时不筛选，等玩家行动解析后再筛选
+    state['all_npcs'] = all_npcs
+    state['active_npcs'] = all_npcs  # 初始时包含所有NPC
     
     objects_state = map_state.get('objects', {})
     print(f"[Orchestrator] 从 map_state 读取 Objects: keys={list(objects_state.keys())}")
@@ -113,6 +127,19 @@ async def orchestrator_agent(state: AgentState):
         state['player_input'], state['active_npcs'], state['interactable_objects']
     )
     print(f"[Orchestrator] 解析到的玩家意图: {state['player_action']}")
+    
+    # 根据玩家行动筛选相关的NPC
+    if state['all_npcs'] and len(state['all_npcs']) > 3:
+        print(f"[Orchestrator] 开始NPC筛选，当前有{len(state['all_npcs'])}个NPC")
+        state['active_npcs'] = await npc_filter.filter_npcs_by_relevance(
+            state['player_input'],
+            state['player_action'],
+            state['all_npcs'],
+            max_npcs=3
+        )
+        print(f"[Orchestrator] NPC筛选完成，激活{len(state['active_npcs'])}个NPC: {[n.get('id') for n in state['active_npcs']]}")
+    else:
+        print(f"[Orchestrator] NPC数量较少({len(state['all_npcs'])}个)，无需筛选")
 
     # 先检查当前地图的事件触发条件
     if not state['session_state'].get('pending_check_event_id'):
@@ -179,7 +206,33 @@ async def orchestrator_agent(state: AgentState):
             
             # 重新加载新地图的NPC和对象
             npc_ids = state['map_state'].get('npcs', [])
-            state['active_npcs'] = [get_character_sheet(npc_id).get('info', {}) for npc_id in npc_ids if get_character_sheet(npc_id)]
+            print(f"[Orchestrator] 新地图NPC IDs: {npc_ids}")
+            
+            # 修复：确保NPC信息正确加载
+            state['all_npcs'] = []
+            for npc_id in npc_ids:
+                npc_sheet = get_character_sheet(npc_id)
+                if npc_sheet and npc_sheet.get('info'):
+                    npc_info = npc_sheet['info']
+                    # 确保NPC信息包含必要的字段
+                    npc_info['id'] = npc_id
+                    state['all_npcs'].append(npc_info)
+                    print(f"[Orchestrator] 加载NPC: {npc_info.get('name', npc_id)}")
+                else:
+                    print(f"[Orchestrator] 警告：无法获取NPC {npc_id} 的信息，尝试从数据库重新加载...")
+                    # 如果Redis中没有NPC数据，从数据库重新加载
+                    npc_sheet = db_manager.get_character_data(npc_id)
+                    if npc_sheet:
+                        save_character_sheet(npc_id, npc_sheet)
+                        npc_info = npc_sheet.get('info', {})
+                        npc_info['id'] = npc_id
+                        state['all_npcs'].append(npc_info)
+                        print(f"[Orchestrator] 成功从数据库重新加载NPC: {npc_info.get('name', npc_id)}")
+                    else:
+                        print(f"[Orchestrator] 错误：无法从数据库获取NPC {npc_id} 的信息")
+            
+            # 移动后，暂时激活所有NPC（等玩家行动后再筛选）
+            state['active_npcs'] = state['all_npcs']
             
             objects_state = state['map_state'].get('objects', {})
             state['interactable_objects'] = []
@@ -326,7 +379,14 @@ async def npc_loop_agent(state: AgentState):
         system_prompt = f"""
         你正在扮演NPC：{npc_name}。
         你的当前状态是：'{npc_info.get('status', '正常')}'，你的目标是：'{npc_info.get('current_goal', '无')}'。
-        根据以下情景，以第一人称视角做出符合你个性的反应。
+        
+        【你的初始知识】：
+        {npc_info.get('initial_knowledge', '无特殊知识')}
+        
+        【扮演须知】：
+        {npc_info.get('roleplay_guidelines', '保持角色一致性')}
+        
+        根据以下情景，以第一人称视角做出符合你个性的反应。请严格按照扮演须知来表现角色特征。
         
         你的回应必须是严格的JSON格式，包含以下字段：
         - "visibility": "public" 或 "private"
@@ -558,6 +618,8 @@ async def chat_endpoint(request: ChatRequest):
         print(f"[Chat] 保存状态: completed_events={final_state['completed_events']}")
         
         save_world_state(final_state['world_state'])
+        # 使用session_state中的当前地图ID，而不是函数开始时的current_map_id
+        current_map_id = final_state['session_state'].get('current_map_id', 1)
         save_map_state(current_map_id, final_state['map_state'])
         save_session_state(character_id, final_state['session_state'])
         save_conversation_history(character_id, final_state['conversation_history'])

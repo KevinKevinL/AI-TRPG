@@ -89,6 +89,8 @@ CREATE TABLE "characters" (
   "current_goal" TEXT NULL,
   "status" TEXT NULL,
   "relationships" TEXT NULL, -- JSON
+  "initial_knowledge" TEXT NULL, -- NPC初始拥有的知识
+  "roleplay_guidelines" TEXT NULL, -- NPC扮演须知
   FOREIGN KEY ("profession_id") REFERENCES "professions" ("id") ON DELETE SET NULL,
   FOREIGN KEY ("current_location_id") REFERENCES "maps" ("id") ON DELETE SET NULL
 );
@@ -206,16 +208,20 @@ INSERT INTO "interactable_objects" ("object_id", "map_id", "object_name", "descr
 */
 + 
 -- 填充角色: 艾米利亚·韦伯
-INSERT INTO "characters" ("id", "name", "if_npc", "gender", "description", "current_location_id", "current_vehicle_id", "current_goal", "status") VALUES
+INSERT INTO "characters" ("id", "name", "if_npc", "gender", "description", "current_location_id", "current_vehicle_id", "current_goal", "status", "initial_knowledge", "roleplay_guidelines") VALUES
 ('amelia_weber', '艾米利亚·韦伯', 1, '女',
 '艾米利亚是个20出头，看起来又瘦又憔悴但是却不失魅力的女人。她正处于严重的创伤后应激状态，对外界刺激反应极大，语言能力减退，只会重复一些破碎的词语或发出无意义的呜咽声。她的所有行为都围绕着寻找安全感和躲避想象中的威胁。',
-1, NULL, '(非理性)不惜一切代价寻找安全感，躲避看不见的威胁', '创伤后应激，精神恍惚，语言混乱');
+1, NULL, '(非理性)不惜一切代价寻找安全感，躲避看不见的威胁', '创伤后应激，精神恍惚，语言混乱',
+'艾米利亚知道附近有一个加油站咖啡馆，她曾经去过那里。她知道死光的存在，但无法清晰表达。她记得自己的爷爷韦伯医生，以及一些关于古老银质挂坠的记忆。',
+'扮演艾米利亚时，始终保持创伤后应激状态的特征：语言破碎、重复词语、极度敏感、寻求安全感。她的反应应该是不理性的，对外界刺激过度敏感。她不会主动攻击，只会躲避和寻求帮助。她的语言应该包含"爷爷"、"项链"、"安全"等关键词。');
 
 -- 填充角色: 死光
-INSERT INTO "characters" ("id", "name", "if_npc", "description", "current_location_id", "current_goal", "status") VALUES
+INSERT INTO "characters" ("id", "name", "if_npc", "description", "current_location_id", "current_goal", "status", "initial_knowledge", "roleplay_guidelines") VALUES
 ('deathlight', '死光', 1,
 '它看起来像一团会让观看者看起来又恶心又怪异的，泼洒出来的银白色墨汁。它是一个没有声带的掠食性实体，【无法说话】，只会通过无声的移动和散发出的非人气息来表达意图。在本章中，它处于【饱食状态】，没有强烈的攻击欲望。',
-1, '保持隐蔽，观察并评估附近潜在的能量源', '饱食后潜伏，隐匿');
+1, '保持隐蔽，观察并评估附近潜在的能量源', '饱食后潜伏，隐匿',
+'死光知道艾米利亚·韦伯的存在，知道她身上有银质挂坠。它了解附近的地形，知道加油站咖啡馆的位置。它知道自己的掠食本能，但当前处于饱食状态。',
+'扮演死光时，始终保持非人实体的特征：无法说话，只能通过移动和气息表达意图。当前处于饱食状态，不会主动攻击，只会观察和评估。它的行为应该表现出对银质挂坠的兴趣，以及对艾米利亚的关注。它的移动应该是无声的，带有威胁性的，但不会立即采取行动。');
 
 -- 填充 艾米利亚·韦伯 的数据
 INSERT INTO "attributes" ("character_id", "strength", "constitution", "size", "dexterity", "appearance", "intelligence", "power", "education", "luck") VALUES

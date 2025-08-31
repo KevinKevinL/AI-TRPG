@@ -64,8 +64,8 @@ class DatabaseManager:
 
     # --- 新增：获取地图实体 ---
     def get_npcs_on_map(self, map_id: int) -> List[Dict[str, Any]]:
-        """获取指定地图上的所有NPC基础信息"""
-        query = "SELECT id, name FROM characters WHERE if_npc = 1 AND current_location_id = ?"
+        """获取指定地图上的所有NPC基础信息，包括初始知识和扮演须知"""
+        query = "SELECT id, name, initial_knowledge, roleplay_guidelines FROM characters WHERE if_npc = 1 AND current_location_id = ?"
         return self.execute_query(query, (map_id,)) or []
 
     def get_objects_on_map(self, map_id: int) -> List[Dict[str, Any]]:
