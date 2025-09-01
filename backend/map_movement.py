@@ -7,7 +7,7 @@ from databaseManager import db_manager
 from redis_manager import (
     get_session_state, save_session_state,
     get_map_state, save_map_state,
-    get_character_sheet,
+    get_character_sheet, save_character_sheet,
     get_map_accessibility, update_map_accessibility
 )
 
@@ -120,6 +120,10 @@ class MapMovementManager:
             )
             npc_ids = [npc['id'] for npc in npcs]
             
+            # 为新地图的NPC初始化记忆系统和session_state
+            self._initialize_npc_memories_for_map(map_id, npc_ids)
+            self._initialize_npc_session_states_for_map(map_id, npc_ids)
+            
             # 获取地图上的可交互对象
             objects = self.db_manager.execute_query(
                 "SELECT object_id, object_name, current_state FROM interactable_objects WHERE map_id = ?",
@@ -164,6 +168,88 @@ class MapMovementManager:
             print(f"获取移动描述失败: {e}")
             return "你移动到了新的地点"
     
+    def _initialize_npc_memories_for_map(self, map_id: int, npc_ids: list):
+        """为新地图的NPC初始化记忆系统"""
+        try:
+            from memory_manager import memory_manager
+            
+            def get_map_name(map_id):
+                """获取地图名称"""
+                map_names = {
+                    1: '阿卡姆郊外公路',
+                    2: '加油站咖啡馆',
+                    3: '前往阿卡姆的道路'
+                }
+                return map_names.get(map_id, f'地图{map_id}')
+            
+            for npc_id in npc_ids:
+                try:
+                    # 检查NPC是否已有记忆
+                    existing_memories = memory_manager.get_npc_memories(npc_id, limit=1)
+                    if not existing_memories:
+                        # 获取NPC信息
+                        npc_sheet = self.db_manager.get_character_data(npc_id)
+                        if npc_sheet:
+                            npc_name = npc_sheet.get('info', {}).get('name', npc_id)
+                            map_name = get_map_name(map_id)
+                            
+                            # 为NPC创建初始记忆
+                            initial_memory = f"我是{npc_name}，正在{map_name}。"
+                            
+                            memory_manager.add_npc_memory(
+                                character_id=npc_id,
+                                memory_text=initial_memory,
+                                context={
+                                    "initialization": True,
+                                    "map_id": map_id,
+                                    "npc_name": npc_name,
+                                    "map_name": map_name
+                                }
+                            )
+                            print(f"为新地图{map_id}的NPC {npc_id} 创建了初始记忆")
+                        else:
+                            print(f"警告：无法获取NPC {npc_id} 的完整数据")
+                    else:
+                        print(f"NPC {npc_id} 已有记忆，跳过初始化")
+                except Exception as e:
+                    print(f"初始化NPC {npc_id} 记忆时出错: {e}")
+                    
+        except Exception as e:
+            print(f"初始化地图{map_id}的NPC记忆时出错: {e}")
+
+    def _initialize_npc_session_states_for_map(self, map_id: int, npc_ids: list):
+        """为新地图的NPC初始化session_state"""
+        try:
+            for npc_id in npc_ids:
+                try:
+                    # 检查NPC是否已有session_state
+                    existing_session = get_session_state(npc_id)
+                    if not existing_session:
+                        # 获取NPC的完整数据
+                        npc_sheet = self.db_manager.get_character_data(npc_id)
+                        if npc_sheet:
+                            # 确保NPC的完整数据保存到Redis
+                            save_character_sheet(npc_id, npc_sheet)
+                            
+                            npc_derived = npc_sheet.get('derived_attributes', {})
+                            npc_session = {
+                                "hp": npc_derived.get("hit_points", 10),
+                                "sanity": npc_derived.get("sanity", 50),
+                                "mp": npc_derived.get("magic_points", 10),
+                                "current_map_id": npc_sheet.get('info', {}).get('current_location_id', map_id),
+                                "current_vehicle_id": npc_sheet.get('info', {}).get('current_vehicle_id', None),
+                            }
+                            save_session_state(npc_id, npc_session)
+                            print(f"为新地图{map_id}的NPC {npc_id} 创建了session_state")
+                        else:
+                            print(f"警告：无法获取NPC {npc_id} 的完整数据")
+                    else:
+                        print(f"NPC {npc_id} 已有session_state，跳过创建")
+                except Exception as e:
+                    print(f"初始化NPC {npc_id} session_state时出错: {e}")
+                    
+        except Exception as e:
+            print(f"初始化地图{map_id}的NPC session_state时出错: {e}")
 
 
 # 创建全局实例

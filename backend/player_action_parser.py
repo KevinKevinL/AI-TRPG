@@ -80,7 +80,6 @@ async def parse_player_action(player_input: str, available_npcs: list = [], avai
     - move: 移动 (关键词: 走, 前往, 回到, 去)
     - leave_woman: (特殊指令) 抛下艾米利亚离开
     - help_woman: (特殊指令) 帮助艾米利亚
-    - take_amelia_in_car: (特殊指令) 让艾米利亚上车 (关键词: 上车, 载她, 带她走, 一起走)
 
     # 2. 可用目标 (target) 列表:
     - NPC: [{npc_list_str}]
@@ -108,9 +107,6 @@ async def parse_player_action(player_input: str, available_npcs: list = [], avai
     
     玩家输入: "我开车走了，不管她了。"
     JSON: {{"intent": "leave_woman"}}
-
-    玩家输入："下车帮助她"
-    JSON: {{"intent": "help_woman"}}
     
     玩家输入："上车避雨吧"
     JSON: {{"intent": "take_amelia_in_car"}}

@@ -48,6 +48,7 @@ class AgentState(TypedDict):
     pending_event_data: Optional[Dict[str, Any]]
     turn_context_summary: str
     selected_npcs: List[str]
+    npc_reactions_info: List[Dict[str, Any]]
 
 def check_preconditions(event: Dict[str, Any], state: AgentState) -> bool:
     pre_event_ids_str = event.get('pre_event_ids')
@@ -608,8 +609,6 @@ async def npc_loop_agent(state: AgentState):
             }
             
             # 保存反应信息，稍后统一处理记忆
-            if not hasattr(state, 'npc_reactions_info'):
-                state['npc_reactions_info'] = []
             state['npc_reactions_info'].append(reaction_info)
 
         except (json.JSONDecodeError, KeyError) as e:
@@ -620,7 +619,7 @@ async def npc_loop_agent(state: AgentState):
     print(f"[NPC] 本回合生成反应数量: {len(all_reactions)}")
     
     # 统一更新所有NPC的短期记忆（包含完整的回合信息）
-    if hasattr(state, 'npc_reactions_info') and state['npc_reactions_info']:
+    if 'npc_reactions_info' in state and state['npc_reactions_info']:
         print("[NPC] 开始统一更新NPC短期记忆...")
         
         # 构建完整的回合总结
@@ -634,13 +633,13 @@ async def npc_loop_agent(state: AgentState):
             npc_id = reaction_info['npc_id']
             npc_name = reaction_info['npc_name']
             
-            # 构建该NPC的完整观察记忆
+            # 构建该NPC的简洁观察记忆
             if state.get('player_input', '').strip():
-                # 玩家有输入的情况
-                current_observation = f"我观察到以下情景: [玩家的行动是：'{state.get('player_input', '')}'。{full_round_summary.split('玩家的行动是：')[1] if '玩家的行动是：' in full_round_summary else full_round_summary}]，并做出了反应: {reaction_info['reaction_text']}"
+                # 玩家有输入的情况 - 只记录关键信息
+                current_observation = f"玩家行动：'{state.get('player_input', '')}'。我的反应：{reaction_info['reaction_text']}"
             else:
                 # 玩家无输入，NPC主动行动的情况
-                current_observation = f"我主动行动：{reaction_info['reaction_text']}，基于我的目标'{reaction_info['new_goal']}'和当前状态'{reaction_info['new_status']}'。同时观察到：{full_round_summary}"
+                current_observation = f"我主动行动：{reaction_info['reaction_text']}，基于目标'{reaction_info['new_goal']}'和状态'{reaction_info['new_status']}'"
             
             context = {
                 "player_input": state.get('player_input', ''),
@@ -810,7 +809,8 @@ async def chat_endpoint(request: ChatRequest):
         completed_events=get_completed_event_ids(character_id),
         final_output="", active_npcs=[], interactable_objects=[], player_action={},
         triggered_event=None, skill_check_result=None, npc_reactions=[], 
-        pending_event_data=None, turn_context_summary="", selected_npcs=request.selected_npcs
+        pending_event_data=None, turn_context_summary="", selected_npcs=request.selected_npcs,
+        npc_reactions_info=[]
     )
     try:
         player_action_parser.set_event_loop(asyncio.get_running_loop())
