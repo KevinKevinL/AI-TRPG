@@ -33,15 +33,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Only POST requests are allowed" });
   }
 
-  const { input, role, module, selected_npcs } = req.body;
-    if (!input || !role) {
-      return res.status(400).json({ error: "Input and role are required." });
+  const { input, selected_npcs } = req.body;
+  if (!input) {
+    return res.status(400).json({ error: "Input is required." });
   }
 
   try {
     const pythonBackendUrl = "http://localhost:8000/api/chat";
 
-    // 向你的 Python 后端发送请求，包含module字段
+    // 向你的 Python 后端发送请求
     const backendResponse = await fetch(pythonBackendUrl, {
       method: 'POST',
       headers: {
@@ -49,8 +49,6 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({ 
         input, 
-        role, 
-        module: module || null,  // 确保module字段被传递，如果未提供则为null
         selected_npcs: selected_npcs || []  // 传递选中的NPC列表
       }),
     });

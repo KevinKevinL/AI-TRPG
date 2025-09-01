@@ -6,6 +6,7 @@ from langgraph.graph import StateGraph, END
 import json
 import asyncio
 import random
+from datetime import datetime
 
 # --- LLM and Langchain Imports ---
 from langchain_openai import ChatOpenAI
@@ -131,41 +132,40 @@ async def orchestrator_agent(state: AgentState):
     print(f"[Orchestrator] 解析到的玩家意图: {state['player_action']}")
     
     # 根据玩家行动筛选相关的NPC
-    if state['all_npcs'] and len(state['all_npcs']) > 3:
+    # 检查是否有玩家选择的NPC
+    selected_npcs = state.get('selected_npcs', [])
+    if selected_npcs:
+        print(f"[Orchestrator] 使用玩家选择的NPC: {selected_npcs}")
+        # 只激活玩家选择的NPC
+        state['active_npcs'] = [npc for npc in state['all_npcs'] if npc.get('id') in selected_npcs]
+        print(f"[Orchestrator] 激活玩家选择的NPC: {[n.get('id') for n in state['active_npcs']]}")
+    elif state['all_npcs'] and len(state['all_npcs']) > 3:
         print(f"[Orchestrator] 开始NPC筛选，当前有{len(state['all_npcs'])}个NPC")
         
-        # 检查是否有玩家选择的NPC
-        selected_npcs = state.get('selected_npcs', [])
-        if selected_npcs:
-            print(f"[Orchestrator] 使用玩家选择的NPC: {selected_npcs}")
-            # 只激活玩家选择的NPC
-            state['active_npcs'] = [npc for npc in state['all_npcs'] if npc.get('id') in selected_npcs]
-            print(f"[Orchestrator] 激活玩家选择的NPC: {[n.get('id') for n in state['active_npcs']]}")
-        else:
-            # 获取最近几轮激活的NPC（从对话历史中提取）
-            recent_npcs = []
-            try:
-                conversation_history = get_conversation_history(state['character_id'])
-                # 从最近几轮对话中提取NPC ID
-                for msg in conversation_history[-10:]:  # 只看最近10条消息
-                    if msg.get('role') == 'npc' and msg.get('character_id'):
-                        if msg['character_id'] not in recent_npcs:
-                            recent_npcs.append(msg['character_id'])
-            except:
-                pass
-            
-            state['active_npcs'] = await npc_filter.filter_npcs_by_relevance(
-                state['player_input'],
-                state['player_action'],
-                state['all_npcs'],
-                max_npcs=3,
-                recent_npcs=recent_npcs
-            )
-            print(f"[Orchestrator] NPC筛选完成，激活{len(state['active_npcs'])}个NPC: {[n.get('id') for n in state['active_npcs']]}")
-            if recent_npcs:
-                print(f"[Orchestrator] 最近激活的NPC: {recent_npcs}")
+        # 获取最近几轮激活的NPC（从对话历史中提取）
+        recent_npcs = []
+        try:
+            conversation_history = get_conversation_history(state['character_id'])
+            # 从最近几轮对话中提取NPC ID
+            for msg in conversation_history[-10:]:  # 只看最近10条消息
+                if msg.get('role') == 'npc' and msg.get('character_id'):
+                    if msg['character_id'] not in recent_npcs:
+                        recent_npcs.append(msg['character_id'])
+        except:
+            pass
+        
+        state['active_npcs'] = await npc_filter.filter_npcs_by_relevance(
+            state['player_input'],
+            state['player_action'],
+            state['all_npcs'],
+            max_npcs=3,
+            recent_npcs=recent_npcs
+        )
+        print(f"[Orchestrator] NPC筛选完成，激活{len(state['active_npcs'])}个NPC: {[n.get('id') for n in state['active_npcs']]}")
+        if recent_npcs:
+            print(f"[Orchestrator] 最近激活的NPC: {recent_npcs}")
     else:
-        print(f"[Orchestrator] NPC数量较少({len(state['all_npcs'])}个)，无需筛选")
+        print(f"[Orchestrator] NPC数量较少({len(state['all_npcs'])}个)且无玩家选择，激活所有NPC")
 
     # 先检查当前地图的事件触发条件
     if not state['session_state'].get('pending_check_event_id'):
@@ -709,9 +709,10 @@ async def narrative_synthesizer_agent(state: AgentState):
         print(f"[Narrative] 处理即时事件 {event.get('event_id')}")
         process_event_effects(json.loads(event['effects']))
 
-    for reaction in state.get('npc_reactions', []):
-        if reaction.get("visibility", "public") == "public":
-            final_narrative += f"{reaction['npc_name']}{reaction['reaction']}\n"
+    # NPC回复将在前端单独显示，这里只保留叙述部分
+    # for reaction in state.get('npc_reactions', []):
+    #     if reaction.get("visibility", "public") == "public":
+    #         final_narrative += f"{reaction['npc_name']}{reaction['reaction']}\n"
             
     player_sheet = state['character_sheet']
     player_investigate = get_skill_value_from_sheet(player_sheet, 'investigate')
@@ -831,7 +832,30 @@ async def chat_endpoint(request: ChatRequest):
         
         print(f"[Chat] 回复长度: {len(final_state.get('final_output', ''))}")
         print(f"{'='*20} [ 回合结束 ] {'='*20}\n")
-        return {"reply": final_state.get("final_output", "系统错误")}
+        # 构建聊天格式的回复
+        chat_messages = []
+        current_timestamp = datetime.now().isoformat()
+        
+        # 添加主要叙述
+        if final_state.get("final_output"):
+            chat_messages.append({
+                "type": "narrative",
+                "content": final_state.get("final_output"),
+                "timestamp": current_timestamp
+            })
+        
+        # 添加NPC回复
+        for reaction in final_state.get('npc_reactions', []):
+            if reaction.get("visibility", "public") == "public":
+                chat_messages.append({
+                    "type": "npc",
+                    "npc_name": reaction.get("npc_name", "未知NPC"),
+                    "npc_id": reaction.get("npc_id", ""),
+                    "content": reaction.get("reaction", ""),
+                    "timestamp": current_timestamp
+                })
+        
+        return {"chat_messages": chat_messages}
     except Exception as e:
         import traceback
         print(f"LangGraph 运行出错: {traceback.format_exc()}")
