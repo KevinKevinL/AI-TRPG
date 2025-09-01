@@ -38,3 +38,56 @@ UPDATE "characters"
 SET "initial_knowledge" = '比利亲眼目睹了“死光”吞噬了他的朋友克莱姆。他知道死光就在附近。他现在心智倒退，但仍然记得一切，包括他和克莱姆的犯罪行为。',
     "roleplay_guidelines" = '扮演比利时，始终处于精神崩溃和极度恐慌的状态。他的行为像个孩子，情绪无法处理。当被问及任何事时，他会毫不顾忌地透露真相，因为他已经无法理解行为的后果。每一道闪电和雷鸣都会让他感到恐慌。'
 WHERE "id" = 'billy_easthous';
+
+
+-- Event 23: 玩家试图让杰克·邦恩斯闭嘴
+INSERT OR REPLACE INTO "events" ("event_id", "event_info", "map_id", "if_unique", "pre_event_ids", "preconditions", "effects") VALUES
+(23, '让杰克·邦恩斯闭嘴', 2, 0, '[14]',
+'{"player_action": {"intent": "force_shut_up", "target": "杰克·邦恩斯"}}',
+'{
+  "skill_check": {"required": true, "character_id": -1, "skill_id": 18, "difficulty": 2},
+  "outcomes": {
+    "suspense_narrative": "你决定用强硬手段让杰克闭嘴，他似乎被你的态度激怒了，摆出了防备的姿势。",
+    "success": {
+      "narrative": "你一拳打在杰克的脸上，他踉跄着向后退了几步，鼻子开始流血。他大声咒骂着，但暂时被你震慑住了，闭上了嘴。",
+      "state_changes": [
+        { "target": "jack_bohns", "attribute_id": 13, "change": -1 },
+        { "target": "jack_bohns", "attribute_id": 10, "change": -10 }
+      ],
+      "npc_state_change": [{"character_id": "jack_bohns", "new_status": "被震慑，安静下来"}]
+    },
+    "failure": {
+      "narrative": "你试图用拳头教训杰克，但他反应迅速，避开了你的攻击，并挥拳反击。在场的其他人发出了惊恐的尖叫。",
+      "state_changes": [
+        { "target": "player", "attribute_id": 13, "change": -1 },
+        { "target": "jack_bohns", "attribute_id": 10, "change": -5 },
+        { "target": "player", "attribute_id": 10, "change": -5 }
+      ],
+      "npc_state_change": [{"character_id": "jack_bohns", "new_status": "愤怒，攻击"}]
+    }
+  }
+}'),
+-- Event 24: 玩家尝试威慑杰克·邦恩斯
+(24, '威慑杰克·邦恩斯', 2, 0, '[14]',
+'{"player_action": {"intent": "intimidate", "target": "杰克·邦恩斯"}}',
+'{
+  "skill_check": {"required": true, "character_id": -1, "skill_id": 18, "difficulty": 1},
+  "outcomes": {
+    "suspense_narrative": "你用强硬的态度试图震慑杰克，让他停止喧哗。",
+    "success": { 
+      "narrative": "你的气势让杰克感到不安，他停下了喋喋不休，紧张地看着你，但他的眼神中充满了怨恨。萨姆·凯尔汉轻声对你表示了感谢。",
+      "npc_state_change": [{"character_id": "jack_bohns", "new_status": "被震慑，安静下来"}]
+    },
+    "failure": { 
+      "narrative": "你的威慑似乎完全不起作用，杰克嗤之以鼻，并且变得更加愤怒，他开始大声抱怨你不相信他的遭遇，并准备向你挥拳。",
+      "npc_state_change": [{"character_id": "jack_bohns", "new_status": "愤怒"}]
+    }
+  }
+}'),
+-- Event 25: 玩家向萨姆举报杰克
+(25, '向萨姆举报杰克', 2, 0, '[14]',
+'{"player_action": {"intent": "report", "target": "杰克·邦恩斯", "recipient": "萨姆·凯尔汉"}}',
+'{
+  "narrative_injection": "你走到萨姆·凯尔汉面前，轻声告诉他，你认为杰克·邦恩斯的神志有问题，他的行为可能对其他人构成威胁。萨姆听了你的话后，警惕地看了一眼杰克，然后点了点头表示他会处理这件事。",
+  "npc_state_change": [{"character_id": "sam_kelhan", "new_status": "警惕"}]
+}');

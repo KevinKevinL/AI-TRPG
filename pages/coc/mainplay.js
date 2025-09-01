@@ -26,6 +26,15 @@ export default function MainPlay() {
   // 新增：骰子相关状态
   const [diceRollData, setDiceRollData] = useState(null);
   const [diceHistory, setDiceHistory] = useState([]);
+  
+  // 新增：NPC选择状态
+  const [selectedNPCs, setSelectedNPCs] = useState([]);
+  
+  // NPC选择回调函数
+  const handleNPCSelect = (npcIds) => {
+    setSelectedNPCs(npcIds);
+    console.log('选中的NPC:', npcIds);
+  };
 
   useEffect(() => {
     const handleEsc = (event) => {
@@ -124,6 +133,7 @@ export default function MainPlay() {
                 <DialogueBox
                   messages={messages}
                   setMessages={setMessages}
+                  selectedNPCs={selectedNPCs}
                 />
               </div>
             </div>
@@ -139,7 +149,7 @@ export default function MainPlay() {
             />
           </div>
           <div className="bg-emerald-0 rounded-lg">
-            <MapPanel characterId={currentCharacterId} />
+            <MapPanel characterId={currentCharacterId} onNPCSelect={handleNPCSelect} />
           </div>
           {/* Add flex-grow to push the character status to the bottom */}
           <div className="flex-grow"></div>

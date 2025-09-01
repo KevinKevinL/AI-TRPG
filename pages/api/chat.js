@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Only POST requests are allowed" });
   }
 
-  const { input, role, module } = req.body;
+  const { input, role, module, selected_npcs } = req.body;
     if (!input || !role) {
       return res.status(400).json({ error: "Input and role are required." });
   }
@@ -50,7 +50,8 @@ export default async function handler(req, res) {
       body: JSON.stringify({ 
         input, 
         role, 
-        module: module || null  // 确保module字段被传递，如果未提供则为null
+        module: module || null,  // 确保module字段被传递，如果未提供则为null
+        selected_npcs: selected_npcs || []  // 传递选中的NPC列表
       }),
     });
 

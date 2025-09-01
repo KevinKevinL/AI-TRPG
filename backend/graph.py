@@ -47,6 +47,7 @@ class AgentState(TypedDict):
     npc_reactions: List[Dict[str, Any]]
     pending_event_data: Optional[Dict[str, Any]]
     turn_context_summary: str
+    selected_npcs: List[str]
 
 def check_preconditions(event: Dict[str, Any], state: AgentState) -> bool:
     pre_event_ids_str = event.get('pre_event_ids')
@@ -131,13 +132,37 @@ async def orchestrator_agent(state: AgentState):
     # 根据玩家行动筛选相关的NPC
     if state['all_npcs'] and len(state['all_npcs']) > 3:
         print(f"[Orchestrator] 开始NPC筛选，当前有{len(state['all_npcs'])}个NPC")
-        state['active_npcs'] = await npc_filter.filter_npcs_by_relevance(
-            state['player_input'],
-            state['player_action'],
-            state['all_npcs'],
-            max_npcs=3
-        )
-        print(f"[Orchestrator] NPC筛选完成，激活{len(state['active_npcs'])}个NPC: {[n.get('id') for n in state['active_npcs']]}")
+        
+        # 检查是否有玩家选择的NPC
+        selected_npcs = state.get('selected_npcs', [])
+        if selected_npcs:
+            print(f"[Orchestrator] 使用玩家选择的NPC: {selected_npcs}")
+            # 只激活玩家选择的NPC
+            state['active_npcs'] = [npc for npc in state['all_npcs'] if npc.get('id') in selected_npcs]
+            print(f"[Orchestrator] 激活玩家选择的NPC: {[n.get('id') for n in state['active_npcs']]}")
+        else:
+            # 获取最近几轮激活的NPC（从对话历史中提取）
+            recent_npcs = []
+            try:
+                conversation_history = get_conversation_history(state['character_id'])
+                # 从最近几轮对话中提取NPC ID
+                for msg in conversation_history[-10:]:  # 只看最近10条消息
+                    if msg.get('role') == 'npc' and msg.get('character_id'):
+                        if msg['character_id'] not in recent_npcs:
+                            recent_npcs.append(msg['character_id'])
+            except:
+                pass
+            
+            state['active_npcs'] = await npc_filter.filter_npcs_by_relevance(
+                state['player_input'],
+                state['player_action'],
+                state['all_npcs'],
+                max_npcs=3,
+                recent_npcs=recent_npcs
+            )
+            print(f"[Orchestrator] NPC筛选完成，激活{len(state['active_npcs'])}个NPC: {[n.get('id') for n in state['active_npcs']]}")
+            if recent_npcs:
+                print(f"[Orchestrator] 最近激活的NPC: {recent_npcs}")
     else:
         print(f"[Orchestrator] NPC数量较少({len(state['all_npcs'])}个)，无需筛选")
 
@@ -177,6 +202,42 @@ async def orchestrator_agent(state: AgentState):
             if candidate_events:
                 state['triggered_event'] = candidate_events[0]
                 print(f"[Orchestrator] 事件已触发: {candidate_events[0]['event_id']} - {candidate_events[0]['event_info']}")
+                
+                # 立即应用事件的状态更改，让NPC在生成反应时就知道状态变化
+                try:
+                    effects = json.loads(candidate_events[0].get('effects', '{}'))
+                    outcomes = effects.get('outcomes', {})
+                    
+                    # 检查是否有成功/失败的结果
+                    if 'success' in outcomes:
+                        outcome_data = outcomes['success']
+                        if 'npc_state_change' in outcome_data:
+                            print(f"[Orchestrator] 立即应用NPC状态更改: {outcome_data['npc_state_change']}")
+                            for change in outcome_data['npc_state_change']:
+                                db_manager.update_npc_state(change['character_id'], new_status=change.get('new_status'))
+                                # 同时更新Redis中的NPC状态
+                                npc_id = change['character_id']
+                                npc_sheet = get_character_sheet(npc_id)
+                                if npc_sheet and npc_sheet.get('info'):
+                                    npc_sheet['info']['status'] = change.get('new_status')
+                                    save_character_sheet(npc_id, npc_sheet)
+                                    print(f"[Orchestrator] 已更新NPC {npc_id} 状态为: {change.get('new_status')}")
+                    
+                    elif 'failure' in outcomes:
+                        outcome_data = outcomes['failure']
+                        if 'npc_state_change' in outcome_data:
+                            print(f"[Orchestrator] 立即应用NPC状态更改: {outcome_data['npc_state_change']}")
+                            for change in outcome_data['npc_state_change']:
+                                db_manager.update_npc_state(change['character_id'], new_status=change.get('new_status'))
+                                # 同时更新Redis中的NPC状态
+                                npc_id = change['character_id']
+                                npc_sheet = get_character_sheet(npc_id)
+                                if npc_sheet and npc_sheet.get('info'):
+                                    npc_sheet['info']['status'] = change.get('new_status')
+                                    save_character_sheet(npc_id, npc_sheet)
+                                    print(f"[Orchestrator] 已更新NPC {npc_id} 状态为: {change.get('new_status')}")
+                except Exception as e:
+                    print(f"[Orchestrator] 应用事件状态更改时出错: {e}")
             else:
                 print("[Orchestrator] 本回合无可触发事件，尝试软性判断...")
                 
@@ -185,6 +246,42 @@ async def orchestrator_agent(state: AgentState):
                 if soft_candidate:
                     state['triggered_event'] = soft_candidate
                     print(f"[Orchestrator] 软性判断触发事件: {soft_candidate['event_id']} - {soft_candidate['event_info']}")
+                    
+                    # 立即应用软性判断事件的状态更改
+                    try:
+                        effects = json.loads(soft_candidate.get('effects', '{}'))
+                        outcomes = effects.get('outcomes', {})
+                        
+                        # 检查是否有成功/失败的结果
+                        if 'success' in outcomes:
+                            outcome_data = outcomes['success']
+                            if 'npc_state_change' in outcome_data:
+                                print(f"[Orchestrator] 立即应用NPC状态更改: {outcome_data['npc_state_change']}")
+                                for change in outcome_data['npc_state_change']:
+                                    db_manager.update_npc_state(change['character_id'], new_status=change.get('new_status'))
+                                    # 同时更新Redis中的NPC状态
+                                    npc_id = change['character_id']
+                                    npc_sheet = get_character_sheet(npc_id)
+                                    if npc_sheet and npc_sheet.get('info'):
+                                        npc_sheet['info']['status'] = change.get('new_status')
+                                        save_character_sheet(npc_id, npc_sheet)
+                                        print(f"[Orchestrator] 已更新NPC {npc_id} 状态为: {change.get('new_status')}")
+                        
+                        elif 'failure' in outcomes:
+                            outcome_data = outcomes['failure']
+                            if 'npc_state_change' in outcome_data:
+                                print(f"[Orchestrator] 立即应用NPC状态更改: {outcome_data['npc_state_change']}")
+                                for change in outcome_data['npc_state_change']:
+                                    db_manager.update_npc_state(change['character_id'], new_status=change.get('new_status'))
+                                    # 同时更新Redis中的NPC状态
+                                    npc_id = change['character_id']
+                                    npc_sheet = get_character_sheet(npc_id)
+                                    if npc_sheet and npc_sheet.get('info'):
+                                        npc_sheet['info']['status'] = change.get('new_status')
+                                        save_character_sheet(npc_id, npc_sheet)
+                                        print(f"[Orchestrator] 已更新NPC {npc_id} 状态为: {change.get('new_status')}")
+                    except Exception as e:
+                        print(f"[Orchestrator] 应用软性判断事件状态更改时出错: {e}")
                 else:
                     print("[Orchestrator] 软性判断也无事件可触发")
         else:
@@ -322,6 +419,21 @@ async def npc_loop_agent(state: AgentState):
     print(f"[NPC Loop] 排序后的NPC列表: {sorted_npcs}")
     
     public_context = state['turn_context_summary']
+    
+    # 如果有触发的事件，明确告诉NPC事件的影响
+    if state.get('triggered_event'):
+        event = state['triggered_event']
+        public_context += f"\n【重要】刚才发生了一个事件：{event.get('event_info', '未知事件')}\n"
+        try:
+            effects = json.loads(event.get('effects', '{}'))
+            outcomes = effects.get('outcomes', {})
+            if 'success' in outcomes and 'narrative' in outcomes['success']:
+                public_context += f"事件结果：{outcomes['success']['narrative']}\n"
+            elif 'failure' in outcomes and 'narrative' in outcomes['failure']:
+                public_context += f"事件结果：{outcomes['failure']['narrative']}\n"
+        except:
+            pass
+    
     print(f"[NPC Loop] public_context: {public_context}")
     private_actions_this_turn = []
     
@@ -367,7 +479,21 @@ async def npc_loop_agent(state: AgentState):
                     similarity = memory.get('similarity', 0)
                     memory_context += f"• {memory['content']} (相关度: {1-similarity:.2f})\n"
         
+        # 构建其他NPC的行动上下文（不包含敏感信息）
+        other_npcs_context = ""
+        if len(sorted_npcs) > 1:
+            other_npcs_context = "--- 其他NPC的行动 ---\n"
+            for other_npc in sorted_npcs:
+                if other_npc.get('id') != npc_id:
+                    other_npc_name = other_npc.get('name', '未知NPC')
+                    other_npc_status = other_npc.get('status', '正常')
+                    # 不暴露其他NPC的目标，只显示基本信息
+                    other_npcs_context += f"• {other_npc_name} (状态: {other_npc_status})\n"
+            other_npcs_context += "\n"
+        
         full_context_for_npc = public_context
+        if other_npcs_context:
+            full_context_for_npc += other_npcs_context
         if perception_context:
             full_context_for_npc += "--- 你额外察觉到的情况 ---\n" + perception_context
         if memory_context:
@@ -385,6 +511,21 @@ async def npc_loop_agent(state: AgentState):
         
         【扮演须知】：
         {npc_info.get('roleplay_guidelines', '保持角色一致性')}
+        
+        【重要：增强自主性】
+        你是一个有独立思考能力的NPC，不要只是被动地回应玩家。你应该：
+        1. **主动追求目标**：根据你的目标主动行动，即使玩家没有直接与你互动
+        2. **观察环境变化**：注意周围发生的一切，包括其他NPC的行动
+        3. **与其他NPC互动**：主动与其他NPC交流、合作或产生冲突
+        4. **表达个人观点**：分享你的想法、担忧或建议
+        5. **推动剧情发展**：通过你的行动和对话推动故事向前发展
+        
+        【行动优先级】：
+        1. **优先回应玩家**：如果玩家直接问你问题或与你互动，必须优先回应
+        2. **关注事件结果**：如果刚才发生了事件，必须根据事件结果调整你的反应
+        3. 然后考虑你的个人目标和当前状态
+        4. 再观察环境和其他NPC的行动
+        5. 最后可以主动推进自己的剧情
         
         根据以下情景，以第一人称视角做出符合你个性的反应。请严格按照扮演须知来表现角色特征。
         
@@ -412,7 +553,24 @@ async def npc_loop_agent(state: AgentState):
         """
         response = await llm.ainvoke([
             SystemMessage(content=system_prompt),
-            HumanMessage(content=f"当前情景: {full_context_for_npc}")
+            HumanMessage(content=f"""
+                当前情景: {full_context_for_npc}
+
+                【思考提示】：
+请仔细思考以下问题，然后做出反应：
+
+1. **玩家互动优先级**：玩家是否在直接与你互动？如果是，必须优先回应！
+2. **事件结果影响**：刚才是否发生了事件？事件结果如何影响你的状态和反应？
+3. **你的个人目标**：你现在最想做什么？你的目标是什么？
+4. **环境观察**：你注意到了什么？有什么变化？
+5. **其他NPC**：你对其他NPC的行动有什么看法？想与他们互动吗？
+6. **主动行动**：在回应玩家后，你还能主动做什么来推进你的目标？
+7. **情感状态**：你现在的感受如何？这会影响你的行动吗？
+
+**重要提醒**：
+- 如果玩家直接问你问题或与你说话，你必须先回应玩家！
+- 如果刚才发生了事件，你必须根据事件结果调整你的反应和状态！
+            """)
         ])
 
         try:
@@ -438,22 +596,21 @@ async def npc_loop_agent(state: AgentState):
                 else:
                     private_actions_this_turn.append(reaction_entry)
             
-            # 保存当前的观察和反应到短期记忆
-            current_observation = f"我观察到以下情景: [玩家的行动是：'{state.get('player_input', '')}'。{public_context.split('玩家的行动是：')[1] if '玩家的行动是：' in public_context else ''}]，并做出了反应: {reaction_text}"
-            
-            context = {
-                "player_input": state.get('player_input', ''),
-                "npc_reaction": reaction_text,
+            # 收集当前NPC的反应信息，稍后统一更新记忆
+            reaction_info = {
+                "npc_id": npc_id,
+                "npc_name": npc_name,
+                "reaction_text": reaction_text,
                 "visibility": npc_response.get("visibility", "public"),
-                "turn_context": public_context  # 只包含当前回合的公共上下文
+                "new_goal": npc_response.get('new_goal', ''),
+                "new_status": npc_response.get('new_status', ''),
+                "public_context": public_context
             }
             
-            # 添加到短期记忆（Redis），自动触发压缩检查
-            memory_manager.add_npc_memory(
-                character_id=npc_id,
-                memory_text=current_observation,
-                context=context
-            )
+            # 保存反应信息，稍后统一处理记忆
+            if not hasattr(state, 'npc_reactions_info'):
+                state['npc_reactions_info'] = []
+            state['npc_reactions_info'].append(reaction_info)
 
         except (json.JSONDecodeError, KeyError) as e:
             print(f"解析NPC {npc_id} 的回应失败: {e}")
@@ -461,6 +618,50 @@ async def npc_loop_agent(state: AgentState):
 
     state['npc_reactions'] = all_reactions
     print(f"[NPC] 本回合生成反应数量: {len(all_reactions)}")
+    
+    # 统一更新所有NPC的短期记忆（包含完整的回合信息）
+    if hasattr(state, 'npc_reactions_info') and state['npc_reactions_info']:
+        print("[NPC] 开始统一更新NPC短期记忆...")
+        
+        # 构建完整的回合总结
+        full_round_summary = state['turn_context_summary']
+        for reaction_info in state['npc_reactions_info']:
+            if reaction_info['visibility'] == 'public':
+                full_round_summary += f"{reaction_info['npc_name']}{reaction_info['reaction_text']}\n"
+        
+        # 为每个NPC更新记忆
+        for reaction_info in state['npc_reactions_info']:
+            npc_id = reaction_info['npc_id']
+            npc_name = reaction_info['npc_name']
+            
+            # 构建该NPC的完整观察记忆
+            if state.get('player_input', '').strip():
+                # 玩家有输入的情况
+                current_observation = f"我观察到以下情景: [玩家的行动是：'{state.get('player_input', '')}'。{full_round_summary.split('玩家的行动是：')[1] if '玩家的行动是：' in full_round_summary else full_round_summary}]，并做出了反应: {reaction_info['reaction_text']}"
+            else:
+                # 玩家无输入，NPC主动行动的情况
+                current_observation = f"我主动行动：{reaction_info['reaction_text']}，基于我的目标'{reaction_info['new_goal']}'和当前状态'{reaction_info['new_status']}'。同时观察到：{full_round_summary}"
+            
+            context = {
+                "player_input": state.get('player_input', ''),
+                "npc_reaction": reaction_info['reaction_text'],
+                "visibility": reaction_info['visibility'],
+                "turn_context": full_round_summary,  # 包含完整回合信息
+                "npc_goal": reaction_info['new_goal'],
+                "npc_status": reaction_info['new_status']
+            }
+            
+            # 添加到短期记忆
+            memory_manager.add_npc_memory(
+                character_id=npc_id,
+                memory_text=current_observation,
+                context=context
+            )
+            print(f"[NPC] 已更新 {npc_name} 的短期记忆")
+        
+        # 清理临时数据
+        del state['npc_reactions_info']
+    
     return state
 
 async def narrative_synthesizer_agent(state: AgentState):
@@ -586,6 +787,7 @@ app_langgraph = workflow.compile()
 graph_router = APIRouter()
 class ChatRequest(BaseModel):
     input: str
+    selected_npcs: Optional[List[str]] = []
 
 @graph_router.post("/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -596,6 +798,8 @@ async def chat_endpoint(request: ChatRequest):
     current_map_id = session_state.get('current_map_id', 1)
     print(f"\n{'='*20} [ 新回合开始 ] {'='*20}")
     print(f"[Chat] 请求输入: '{request.input}' | 角色: {character_id} | 地图: {current_map_id}")
+    if request.selected_npcs:
+        print(f"[Chat] 玩家选择的NPC: {request.selected_npcs}")
     
     initial_state = AgentState(
         player_input=request.input, character_id=character_id,
@@ -606,7 +810,7 @@ async def chat_endpoint(request: ChatRequest):
         completed_events=get_completed_event_ids(character_id),
         final_output="", active_npcs=[], interactable_objects=[], player_action={},
         triggered_event=None, skill_check_result=None, npc_reactions=[], 
-        pending_event_data=None, turn_context_summary=""
+        pending_event_data=None, turn_context_summary="", selected_npcs=request.selected_npcs
     )
     try:
         player_action_parser.set_event_loop(asyncio.get_running_loop())

@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 
-export default function MapPanel({ characterId }) {
+export default function MapPanel({ characterId, onNPCSelect }) {
   const [accessibleMaps, setAccessibleMaps] = useState([]);
   const [currentMap, setCurrentMap] = useState(null);
+  const [currentNPCs, setCurrentNPCs] = useState([]);
+  const [selectedNPCs, setSelectedNPCs] = useState([]);
   const [loading, setLoading] = useState(true);
   const wsRef = useRef(null);
   
@@ -80,6 +82,36 @@ export default function MapPanel({ characterId }) {
           const accessible = mapData.accessible_maps || [];
           console.log('可访问地图:', accessible);
           setAccessibleMaps(accessible);
+          
+          // 获取当前地图的NPC信息
+          const npcIds = mapData.npcs || [];
+          console.log('当前地图NPC IDs:', npcIds);
+          
+          // 获取NPC详细信息
+          const npcPromises = npcIds.map(async (npcId) => {
+            try {
+              const npcResponse = await fetch(`/api/character/${npcId}`);
+              if (npcResponse.ok) {
+                const npcData = await npcResponse.json();
+                return {
+                  id: npcId,
+                  name: npcData.info?.name || npcId,
+                  status: npcData.info?.status || '正常'
+                };
+              }
+            } catch (error) {
+              console.error(`获取NPC ${npcId} 信息失败:`, error);
+            }
+            return {
+              id: npcId,
+              name: npcId,
+              status: '未知'
+            };
+          });
+          
+          const npcs = await Promise.all(npcPromises);
+          console.log('当前地图NPC信息:', npcs);
+          setCurrentNPCs(npcs);
         } else {
           console.error('map_state API调用失败:', mapResponse.status, mapResponse.statusText);
           const errorText = await mapResponse.text();
@@ -131,6 +163,60 @@ export default function MapPanel({ characterId }) {
         <div className="text-sm font-medium text-emerald-700">当前位置</div>
         <div className="text-lg font-bold text-emerald-800">{getMapName(currentMap)}</div>
         <div className="text-xs text-emerald-600 mt-1">{getMapDescription(currentMap)}</div>
+      </div>
+
+      {/* 当前地图NPC */}
+      <div className="mb-3">
+        <div className="text-sm font-medium text-emerald-700 mb-2">当前地图NPC</div>
+        {currentNPCs.length > 0 ? (
+          <div className="space-y-2">
+            {currentNPCs.map((npc) => (
+              <div 
+                key={npc.id}
+                className={`p-2 rounded border transition-colors cursor-pointer ${
+                  selectedNPCs.includes(npc.id)
+                    ? 'bg-blue-100 border-blue-300 text-blue-800'
+                    : 'bg-gray-100 border-gray-200 hover:bg-gray-200'
+                }`}
+                onClick={() => {
+                  const newSelected = selectedNPCs.includes(npc.id)
+                    ? selectedNPCs.filter(id => id !== npc.id)
+                    : [...selectedNPCs, npc.id];
+                  setSelectedNPCs(newSelected);
+                  
+                  // 通知父组件选中的NPC
+                  if (onNPCSelect) {
+                    onNPCSelect(newSelected);
+                  }
+                }}
+              >
+                <div className="text-sm font-medium">{npc.name}</div>
+                <div className="text-xs text-gray-600">状态: {npc.status}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500 italic">当前地图没有NPC</div>
+        )}
+        
+        {selectedNPCs.length > 0 && (
+          <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+            <div className="text-xs text-blue-700">
+              已选择 {selectedNPCs.length} 个NPC进行互动
+            </div>
+            <button
+              onClick={() => {
+                setSelectedNPCs([]);
+                if (onNPCSelect) {
+                  onNPCSelect([]);
+                }
+              }}
+              className="mt-1 text-xs text-blue-600 hover:text-blue-800 underline"
+            >
+              清除选择
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 可前往的地点 */}

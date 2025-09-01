@@ -2,7 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
 
-export default function DialogueBox({ messages, setMessages }) {
+export default function DialogueBox({ messages, setMessages, selectedNPCs = [] }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   // npcChats 用于存储每个 NPC 的聊天记录，键为 NPC 名称，值为消息数组
@@ -23,7 +23,8 @@ export default function DialogueBox({ messages, setMessages }) {
       const response = await axios.post("/api/chat", {
         input,
         role: "KP", // 使用 KP 身份对话
-        module: "dead_light" // 指定模组为dead_light
+        module: "dead_light", // 指定模组为dead_light
+        selected_npcs: selectedNPCs // 传递选中的NPC列表
       });
 
       let reply;
